@@ -15,6 +15,12 @@ var next_cell: Vector2i     # case vers laquelle l'ennemi marche en ce moment
 var path: Array[Vector2i] = []  # cases restantes après next_cell
 var dead := false
 
+# Effets en cours
+var slow_factor := 1.0      # 0.5 = deux fois plus lent
+var slow_time := 0.0
+var poison_dps := 0.0       # dégâts par seconde
+var poison_time := 0.0
+
 
 func setup(grid_astar: AStarGrid2D, start: Vector2i, hp_value: float, speed_value: float) -> void:
 	astar = grid_astar
@@ -36,8 +42,11 @@ func repath() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_effects(delta)
+	if dead:
+		return
 	var target := Grid.cell_to_world(next_cell)
-	var step := speed * delta
+	var step := speed * slow_factor * delta
 	if position.distance_to(target) <= step:
 		position = target
 		if next_cell == Grid.GOAL:
@@ -59,13 +68,46 @@ func take_damage(amount: float) -> void:
 		died.emit(self)
 
 
+func _update_effects(delta: float) -> void:
+	if slow_time > 0.0:
+		slow_time -= delta
+		if slow_time <= 0.0:
+			slow_factor = 1.0
+	if poison_time > 0.0:
+		poison_time -= delta
+		take_damage(poison_dps * delta)
+		if poison_time <= 0.0:
+			poison_dps = 0.0
+
+
+## Ralentit l'ennemi. Le ralentissement le plus fort l'emporte, il ne se cumule pas.
+func apply_slow(factor: float, duration: float) -> void:
+	slow_factor = minf(slow_factor, factor)
+	slow_time = maxf(slow_time, duration)
+
+
+## Empoisonne l'ennemi. Un nouveau poison remplace l'ancien s'il est plus fort.
+func apply_poison(dps: float, duration: float) -> void:
+	poison_dps = maxf(poison_dps, dps)
+	poison_time = maxf(poison_time, duration)
+
+
+func is_poisoned() -> bool:
+	return poison_time > 0.0
+
+
 ## Nombre de cases avant l'objectif (sert aux tours à viser le plus avancé).
 func remaining_steps() -> int:
 	return path.size()
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, RADIUS, Color("c94a3d"))
+	var body := Color("c94a3d")
+	if is_poisoned():
+		body = body.lerp(Color("6aa84f"), 0.5)
+	draw_circle(Vector2.ZERO, RADIUS, body)
+	if slow_time > 0.0:
+		draw_arc(Vector2.ZERO, RADIUS + 3, 0.0, TAU, 24, Color("7fd6e8"), 3.0)
 	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 24, Color("5a1f1a"), 2.0)
 	# Barre de vie
 	var w := 30.0

@@ -2,19 +2,17 @@ extends Node2D
 ## Scène principale du prototype : la grille, les murs, les vagues et l'interface.
 ##
 ## Contrôles :
-##   Clic gauche  : poser (un mur, ou une tour sur un mur selon le mode)
+##   Clic gauche  : poser (un mur, ou une tour sur un mur)
 ##   Clic droit   : retirer une tour, sinon un mur
-##   1 / 2        : mode Mur / mode Tour
+##   1            : mode Mur
+##   2 à 7        : choisir une tour (voir tower_types.gd)
 ##   Espace       : lancer la vague suivante
 ##   R            : recommencer
 
 const WALL_COST := 2
-const TOWER_COST := 15
 const KILL_REWARD := 3
 const WAVE_BONUS := 10
 const SPAWN_INTERVAL := 0.8
-
-enum Mode { WALL, TOWER }
 
 var astar := AStarGrid2D.new()
 var walls := {}                  # Vector2i -> true
@@ -27,7 +25,7 @@ var lives := 20
 var wave := 0
 var to_spawn := 0
 var spawn_timer := 0.0
-var mode := Mode.WALL
+var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
 var game_over := false
 var message := ""
 var message_time := 0.0
@@ -108,13 +106,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_1:
-				mode = Mode.WALL
-			KEY_2:
-				mode = Mode.TOWER
+				selected = ""
 			KEY_SPACE:
 				_start_wave()
 			KEY_R:
 				get_tree().reload_current_scene()
+		for id in TowerTypes.ORDER:
+			if event.keycode == TowerTypes.get_type(id)["key"]:
+				selected = id
 		return
 
 	if game_over:
@@ -124,10 +123,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not Grid.in_bounds(cell):
 			return
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if mode == Mode.WALL:
+			if selected == "":
 				_try_place_wall(cell)
 			else:
-				_try_place_tower(cell)
+				_try_place_tower(cell, selected)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			_remove_at(cell)
 
@@ -157,29 +156,34 @@ func _try_place_wall(cell: Vector2i) -> void:
 	_on_grid_changed()
 
 
-func _try_place_tower(cell: Vector2i) -> void:
+func _try_place_tower(cell: Vector2i, id: String) -> void:
 	if not walls.has(cell):
 		_say("Une tour se pose sur un mur")
 		return
 	if towers.has(cell):
+		_say("Il y a déjà une tour ici")
 		return
-	if gold < TOWER_COST:
+	var cost: int = TowerTypes.get_type(id)["cost"]
+	if gold < cost:
 		_say("Pas assez d'or")
 		return
 	var t := Tower.new()
+	t.setup(id)
 	t.cell = cell
 	t.enemies = enemies
+	t.towers = towers
 	t.position = Grid.cell_to_world(cell)
 	towers[cell] = t
 	add_child(t)
-	gold -= TOWER_COST
+	gold -= cost
 
 
 func _remove_at(cell: Vector2i) -> void:
 	if towers.has(cell):
-		towers[cell].queue_free()
+		var t: Tower = towers[cell]
+		gold += int(t.data["cost"]) / 2  # on récupère la moitié du prix
+		t.queue_free()
 		towers.erase(cell)
-		gold += TOWER_COST / 2
 	elif walls.has(cell):
 		walls.erase(cell)
 		astar.set_point_solid(cell, false)
@@ -255,17 +259,50 @@ func _draw() -> void:
 	if Grid.in_bounds(hover) and not game_over:
 		var hr := Rect2(Grid.OFFSET + Vector2(hover) * c, Vector2(c, c))
 		draw_rect(hr, Color(1, 1, 1, 0.8), false, 2.0)
-		if mode == Mode.TOWER or towers.has(hover):
-			draw_arc(Grid.cell_to_world(hover), Tower.RANGE, 0.0, TAU, 48, Color(0.25, 0.5, 0.82, 0.7), 2.0)
+		var preview_range := 0.0
+		if towers.has(hover):
+			preview_range = towers[hover].range_px()
+		elif selected != "":
+			preview_range = TowerTypes.get_type(selected)["range"]
+		if preview_range > 0.0:
+			draw_arc(Grid.cell_to_world(hover), preview_range, 0.0, TAU, 48, Color(0.25, 0.5, 0.82, 0.7), 2.0)
 
 	# Textes
-	var mode_name := ("Mur (%d or)" % WALL_COST) if mode == Mode.WALL else ("Tour (%d or)" % TOWER_COST)
-	var hud := "Or : %d    Vies : %d    Vague : %d    Mode : %s" % [gold, lives, wave, mode_name]
+	var mode_name := "Mur (%d or)" % WALL_COST
+	if selected != "":
+		var d := TowerTypes.get_type(selected)
+		mode_name = "%s (%d or) : %s" % [d["name"], d["cost"], d["desc"]]
+	var hud := "Or : %d   Vies : %d   Vague : %d   %s" % [gold, lives, wave, mode_name]
 	draw_string(font, Vector2(12, 26), hud, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-	var help := "Clic gauche : poser   Clic droit : retirer   1/2 : mode   Espace : vague   R : recommencer"
+	var help := "Clic gauche : poser   Clic droit : retirer   Espace : vague   R : recommencer"
 	draw_string(font, Vector2(12, 52), help, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.6))
 	if message_time > 0.0:
-		draw_string(font, Vector2(560, 26), message, HORIZONTAL_ALIGNMENT_LEFT, 390, 16, Color("ffe066"))
+		draw_string(font, Vector2(620, 52), message, HORIZONTAL_ALIGNMENT_LEFT, 330, 15, Color("ffe066"))
+
+	_draw_build_bar(font)
+
+
+## Barre du bas : les choix de construction, avec leur touche et leur prix.
+func _draw_build_bar(font: Font) -> void:
+	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL
+	var slot_w := 960.0 / 7.0
+	var entries := [["", "1 Mur", WALL_COST, Color("6b5a45")]]
+	for i in TowerTypes.ORDER.size():
+		var id: String = TowerTypes.ORDER[i]
+		var d := TowerTypes.get_type(id)
+		entries.append([id, "%d %s" % [i + 2, d["name"]], d["cost"], d["color"]])
+	for i in entries.size():
+		var e: Array = entries[i]
+		var r := Rect2(i * slot_w + 3, top + 4, slot_w - 6, 40)
+		var active: bool = e[0] == selected
+		draw_rect(r, Color(1, 1, 1, 0.15) if active else Color(1, 1, 1, 0.05))
+		if active:
+			draw_rect(r, Color("ffe066"), false, 2.0)
+		draw_rect(Rect2(r.position + Vector2(6, 12), Vector2(16, 16)), e[3])
+		var can_pay := gold >= int(e[2])
+		var text_color := Color.WHITE if can_pay else Color(1, 1, 1, 0.4)
+		draw_string(font, r.position + Vector2(28, 18), e[1], HORIZONTAL_ALIGNMENT_LEFT, slot_w - 34, 14, text_color)
+		draw_string(font, r.position + Vector2(28, 34), "%d or" % e[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
 
 
 func _draw_cell(cell: Vector2i, color: Color) -> void:
