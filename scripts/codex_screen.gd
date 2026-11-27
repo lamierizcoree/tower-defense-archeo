@@ -91,14 +91,13 @@ func _draw_relics(font: Font) -> void:
 
 func _draw_jokers(font: Font) -> void:
 	var ids := []
-	for rare in [false, true]:
+	for rar in Jokers.RARITIES:
 		for id in Jokers.DATA:
-			if Jokers.DATA[id]["rare"] == rare:
+			if Jokers.rarity_of(id) == rar:
 				ids.append(id)
 	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / ids.size())
 	for i in ids.size():
 		var j := Jokers.get_joker(ids[i])
-		var color := Color("ffd54a") if j["rare"] else Color("c9b48a")
-		_draw_row(font, i, color, j["name"], "Rare" if j["rare"] else "Commun", j["desc"])
+		_draw_row(font, i, Jokers.color_of(ids[i]), j["name"], Jokers.RARITY_NAMES[j["rarity"]], j["desc"])
 	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d." % Profile.max_jokers()
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
