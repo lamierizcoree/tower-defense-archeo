@@ -1,7 +1,8 @@
 extends Node2D
 ## Écran de récompense après un niveau : choisir 1 carte parmi 3.
 ## Une carte est un joker (règle du jeu) ou une relique (à poser dans une tour).
-## Élite : une relique rare ou légendaire garantie. Boss : une relique légendaire garantie.
+## Élite : une relique rare ou légendaire garantie.
+## Boss tué : une relique légendaire garantie. Boss échappé : une relique rare, pas mieux.
 ## Si on a déjà 5 jokers, il faut en abandonner un pour prendre le nouveau.
 
 const CARD_SIZE := Vector2(260, 300)
@@ -18,15 +19,18 @@ var node_type := ""
 func _ready() -> void:
 	node_type = Run.current_node()["type"]
 	var relic_room := true  # si l'inventaire est plein, on pourra remplacer une relique
-	var forced_relic: String = {"combat": "", "elite": "rare", "boss": "legendaire"}[node_type]
+	var forced_relic: String = {"combat": "", "elite": "rare", "boss": "legendaire" if Run.boss_killed else "rare"}[node_type]
+	var max_rarity := "rare" if node_type == "boss" and not Run.boss_killed else "legendaire"
 	var rare_jokers: int = {"combat": 0, "elite": 1, "boss": 2}[node_type]
 	var jokers := Jokers.draw_choices(Run.rng, Run.jokers, rare_jokers, Profile.luck())
 	var relics_offered := []
 	for i in 3:
 		var relic := ""
 		if relic_room:
-			if i == 0 and forced_relic != "":
-				relic = Relics.draw(Run.rng, forced_relic, Profile.luck(), Profile.is_relic_unlocked)
+			if i == 0 and forced_relic == "legendaire":
+				relic = Relics.draw_legendary(Run.rng, Profile.is_relic_unlocked)
+			elif i == 0 and forced_relic != "":
+				relic = Relics.draw(Run.rng, forced_relic, Profile.luck(), Profile.is_relic_unlocked, max_rarity)
 			elif forced_relic == "" and Run.rng.randf() < RELIC_CHANCE:
 				relic = Relics.draw(Run.rng, "commun", Profile.luck(), Profile.is_relic_unlocked)
 		if relic != "" and not relic in relics_offered:
@@ -35,7 +39,7 @@ func _ready() -> void:
 		elif not jokers.is_empty():
 			choices.append({"kind": "joker", "id": jokers.pop_front()})
 		elif relic_room:
-			choices.append({"kind": "relic", "id": Relics.draw(Run.rng, "commun", Profile.luck(), Profile.is_relic_unlocked)})
+			choices.append({"kind": "relic", "id": Relics.draw(Run.rng, "commun", Profile.luck(), Profile.is_relic_unlocked, max_rarity)})
 
 
 func _card_rect(i: int) -> Rect2:
@@ -117,7 +121,11 @@ func _draw() -> void:
 
 	var title := "Niveau réussi ! Choisis une récompense"
 	if node_type == "boss":
-		title = "%s vaincu ! Choisis une récompense" % EnemyTypes.get_type(Run.biome()["boss"])["name"]
+		var boss_name: String = EnemyTypes.get_type(Run.biome()["boss"])["name"]
+		if Run.boss_killed:
+			title = "%s vaincu ! Choisis une récompense" % boss_name
+		else:
+			title = "%s s'est échappé... Pas de légendaire cette fois" % boss_name
 	if pending != "":
 		title = "Tu as déjà %d jokers : clique sur celui à abandonner" % Profile.max_jokers()
 	if pending_relic != "":

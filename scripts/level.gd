@@ -158,14 +158,18 @@ func _is_storm(index: int) -> bool:
 
 
 func _spawn_enemy(type_id: String) -> void:
-	var e := Enemy.new()
 	var start := spawns[spawn_turn % spawns.size()]
 	spawn_turn += 1
 	var speed_mult: float = biome["enemy_speed"]
 	if wave_index == 0 and Run.has_joker("sablier"):
 		speed_mult *= 0.7
+	_add_enemy(type_id, start, waves[wave_index]["hp_mult"], speed_mult)
+
+
+func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: float) -> Enemy:
+	var e := Enemy.new()
 	var grid := dig_astar if EnemyTypes.get_type(type_id).get("digs", false) else astar
-	e.setup(type_id, grid, start, goal, waves[wave_index]["hp_mult"], speed_mult)
+	e.setup(type_id, grid, start, goal, hp_mult, speed_mult)
 	e.ice = ice
 	e.walls = walls
 	e.venin = Run.has_joker("venin")
@@ -173,15 +177,19 @@ func _spawn_enemy(type_id: String) -> void:
 	e.reached_goal.connect(_on_enemy_reached_goal)
 	enemies.append(e)
 	add_child(e)
+	return e
 
 
 func _on_enemy_died(e: Enemy) -> void:
-	gold += KILL_REWARD + (2 if Run.has_joker("prime") else 0)
+	gold += e.data.get("gold", KILL_REWARD) + (2 if Run.has_joker("prime") else 0)
 	Run.score += e.data["score"]
 	Run.kills += 1
+	if e.is_boss():
+		Run.boss_killed = true
 	var was_poisoned := e.is_poisoned()
 	var where := e.global_position
 	_remove_enemy(e)
+	_split(e, where)
 	if was_poisoned and Run.has_joker("fiole"):
 		for other in enemies.duplicate():
 			if is_instance_valid(other) and other.global_position.distance_to(where) <= 60.0:
@@ -202,6 +210,20 @@ func _on_enemy_reached_goal(e: Enemy) -> void:
 			other.set_process(false)
 		_say("L'expédition est perdue...", 99.0)
 		get_tree().create_timer(1.5).timeout.connect(Run.level_lost)
+
+
+## Jarre : en mourant, elle libère des larves là où elle se trouvait.
+## Elles gardent la difficulté de la vague (même multiplicateur de PV et de vitesse).
+func _split(e: Enemy, where: Vector2) -> void:
+	var child_id: String = e.data.get("splits", "")
+	if child_id == "" or ended:
+		return
+	var hp_mult: float = e.max_hp / e.data["hp"]
+	var speed_mult: float = e.speed / e.data["speed"]
+	var n: int = e.data.get("split_count", 3)
+	for i in n:
+		var larva := _add_enemy(child_id, e.next_cell, hp_mult, speed_mult)
+		larva.position = where + Vector2.from_angle(TAU * i / n) * 10.0
 
 
 func _remove_enemy(e: Enemy) -> void:
@@ -883,6 +905,10 @@ func _wave_panel(index: int) -> Array:
 		lines.append(_line("%d × %s" % [n, d["name"] if n == 1 else d["plural"]], 15, d["color"].lightened(0.35)))
 		lines.append(_line("    PV %d  ·  vitesse %s cases/s  ·  -%d vie%s" % [hp, _num(speed), d["damage"], "s" if d["damage"] > 1 else ""]))
 		lines.append(_line("    " + d["ability"], 13, Color(1, 1, 1, 0.6)))
+		if d.has("splits"):
+			var c := EnemyTypes.get_type(d["splits"])
+			var c_speed: float = c["speed"] * speed_mult / Grid.CELL
+			lines.append(_line("    puis %d × %s : PV %d  ·  vitesse %s cases/s" % [d["split_count"], c["plural"], roundi(c["hp"] * hp_mult), _num(c_speed)], 13, c["color"]))
 	if not ice.is_empty():
 		lines.append(_line("Sur la glace, tous les ennemis vont 2 fois plus vite", 13, Color("9fd3ea")))
 	return lines

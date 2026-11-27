@@ -3,6 +3,8 @@ extends RefCounted
 ## Les types d'ennemis. hp et speed sont les valeurs de base, avant la difficulté du niveau.
 ## damage = vies perdues si l'ennemi atteint la sortie. score = points gagnés en le tuant.
 ## ability = capacité spéciale, affichée dans le détail des vagues.
+## gold = or gagné en le tuant (3 si absent).
+## splits / split_count = type et nombre d'ennemis libérés à sa mort.
 
 const DATA := {
 	"eclaireur": {
@@ -29,17 +31,29 @@ const DATA := {
 		"damage": 1, "score": 10, "digs": true,
 		"ability": "Creuse sous les murs (un mur le ralentit sans l'arrêter), sauf sous les murs scellés.",
 	},
+	"jarre": {
+		"name": "jarre", "plural": "jarres", "shape": "jar",
+		"hp": 70.0, "speed": 55.0, "radius": 15.0, "color": Color("b5653a"),
+		"damage": 1, "score": 12, "splits": "larve", "split_count": 3,
+		"ability": "Assez résistante. En se brisant, libère 3 larves très rapides.",
+	},
+	"larve": {
+		"name": "larve", "plural": "larves", "shape": "larva",
+		"hp": 8.0, "speed": 150.0, "radius": 8.0, "color": Color("e8d36a"),
+		"damage": 1, "score": 2, "gold": 1,
+		"ability": "Sort d'une jarre brisée. Très rapide mais très fragile.",
+	},
 	"scarabee": {
 		"name": "Scarabée-Roi", "plural": "Scarabée-Roi", "shape": "boss",
 		"hp": 900.0, "speed": 34.0, "radius": 24.0, "color": Color("2f7d68"),
-		"damage": 10, "score": 300, "boss": true,
-		"ability": "Boss. Résiste à moitié aux ralentissements. Coûte 10 vies.",
+		"damage": 5, "score": 300, "boss": true,
+		"ability": "Boss. Résiste à moitié aux ralentissements. Coûte 5 vies s'il s'échappe, et la récompense ne dépasse pas une relique rare.",
 	},
 	"colosse_gele": {
 		"name": "Colosse gelé", "plural": "Colosse gelé", "shape": "boss",
 		"hp": 1100.0, "speed": 30.0, "radius": 26.0, "color": Color("4f86b5"),
-		"damage": 10, "score": 400, "boss": true,
-		"ability": "Boss. Résiste à moitié aux ralentissements. Coûte 10 vies.",
+		"damage": 5, "score": 400, "boss": true,
+		"ability": "Boss. Résiste à moitié aux ralentissements. Coûte 5 vies s'il s'échappe, et la récompense ne dépasse pas une relique rare.",
 	},
 }
 
