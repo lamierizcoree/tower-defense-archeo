@@ -77,7 +77,24 @@ Le profil est sauvegardé automatiquement (fichier `profil.json` dans le dossier
 
 ### Niveaux de difficulté
 
-Réussir une expédition débloque le niveau de difficulté suivant (jusqu'à 10). On le choisit au camp de base avec les flèches, avant de partir. Chaque niveau s'ajoute aux précédents : **+20 % de PV pour tous les ennemis** par niveau (+60 % au niveau 3), et en échange **+15 % de score** par niveau, donc plus de points d'amélioration. Pour débloquer le niveau suivant, il faut réussir au niveau le plus haut déjà débloqué. Les réglages sont dans `scripts/data/difficulty.gd`.
+Réussir une expédition débloque le niveau de difficulté suivant (jusqu'à 10). On le choisit au camp de base avec les flèches, avant de partir (survoler le nom affiche les règles). Pour débloquer le niveau suivant, il faut réussir au niveau le plus haut déjà débloqué.
+
+Chaque niveau ajoute **une nouvelle règle**, qui s'ajoute à celles des niveaux précédents. En échange, le score augmente de 15 % par niveau.
+
+| Niveau | Règle | Effet |
+|---|---|---|
+| 1 | Élites errants | 1 ennemi sur 10 est un élite (cercle doré) : PV x2,5, coûte 1 vie de plus, rapporte double or et triple score |
+| 2 | Vents contraires | Ennemis +10 % de vitesse |
+| 3 | Fouilles coûteuses | Les murs coûtent 3 or au lieu de 2 |
+| 4 | Rivalité des ateliers | À partir de 3 tours identiques, ces tours tirent 20 % moins vite |
+| 5 | Bourse maigre | 25 % d'or en moins au début de chaque niveau |
+| 6 | Carrière épuisée | 20 murs au maximum par niveau |
+| 7 | Garde rapprochée | Le boss arrive avec 2 colosses élites |
+| 8 | Butin pillé | Chaque ennemi tué rapporte 1 or de moins (au moins 1) |
+| 9 | Chair maudite | Les ennemis regagnent 2 % de leurs PV par seconde, sauf s'ils sont empoisonnés |
+| 10 | Expédition de trop | 8 vies de moins au départ |
+
+Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
 
 ## L'expédition
 

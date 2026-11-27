@@ -36,6 +36,8 @@ func new_run() -> void:
 	score_bonus = 0
 	biome_index = 0
 	lives = START_LIVES + Profile.bonus_lives()
+	if Difficulty.has(difficulty, "vies"):
+		lives = maxi(1, lives - Difficulty.LIVES_MALUS)
 	jokers.clear()
 	relics.clear()
 	if Profile.starting_relic():

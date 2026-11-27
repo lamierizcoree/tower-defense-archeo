@@ -1,7 +1,7 @@
 extends Node2D
 ## Fin de l'expédition : victoire ou défaite, score, points d'amélioration gagnés.
 
-const BUTTON := Rect2(330, 600, 300, 44)
+const BUTTON := Rect2(330, 620, 300, 44)
 
 
 func _process(_delta: float) -> void:
@@ -45,5 +45,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(0, 530), text, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 16, Relics.RARITY_COLORS[r["rarity"]])
 	if Run.difficulty_unlocked_now:
 		var d := Profile.difficulty_unlocked
-		draw_string(font, Vector2(0, 565), "%s débloquée ! %s" % [Difficulty.name_of(d), Difficulty.describe(d)], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 17, Color("ff8a5c"))
+		var rule := Difficulty.rule_of(d)
+		draw_string(font, Vector2(0, 560), "%s débloquée ! Nouvelle règle : %s" % [Difficulty.name_of(d), rule["name"]], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 17, Color("ff8a5c"))
+		draw_string(font, Vector2(0, 584), rule["desc"], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 14, Color(1, 1, 1, 0.7))
 	UI.button(self, BUTTON, "Retour au camp de base", BUTTON.has_point(get_global_mouse_position()))

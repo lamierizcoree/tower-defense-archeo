@@ -97,9 +97,20 @@ func _draw_difficulty(font: Font, mouse: Vector2) -> void:
 	UI.button(self, BTN_DIFF_DOWN, "<", BTN_DIFF_DOWN.has_point(mouse), choose and level > 0, 20)
 	UI.button(self, BTN_DIFF_UP, ">", BTN_DIFF_UP.has_point(mouse), choose and level < Profile.difficulty_unlocked, 20)
 	draw_string(font, Vector2(380, 607), Difficulty.name_of(level), HORIZONTAL_ALIGNMENT_CENTER, 200, 18, color)
-	var sub := Difficulty.describe(level)
+	var sub := "Aucune règle en plus" if level == 0 else "%d règle%s en plus, score +%d %%  ·  survole pour la liste" % [level, "s" if level > 1 else "", roundi(Difficulty.SCORE_PER_LEVEL * level * 100)]
 	if Run.started:
 		sub = "Expédition en cours  ·  " + sub
 	else:
 		sub += "  ·  débloquée jusqu'à %d" % Profile.difficulty_unlocked
 	draw_string(font, Vector2(0, 642), sub, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.6))
+	# Liste des règles actives au survol du nom de la difficulté
+	if level > 0 and Rect2(380, 580, 200, 70).has_point(mouse):
+		var h := 16.0 + level * 38.0
+		var box := Rect2(150, 572 - h, 660, h)
+		draw_rect(box, Color(0.08, 0.07, 0.06, 0.96))
+		draw_rect(box, Color("ff8a5c"), false, 1.5)
+		for i in level:
+			var r: Dictionary = Difficulty.RULES[i]
+			var y := box.position.y + 24 + i * 38
+			draw_string(font, Vector2(box.position.x + 12, y), "%d. %s" % [i + 1, r["name"]], HORIZONTAL_ALIGNMENT_LEFT, 640, 14, Color("ff8a5c"))
+			draw_string(font, Vector2(box.position.x + 28, y + 17), r["desc"], HORIZONTAL_ALIGNMENT_LEFT, 620, 12, Color(1, 1, 1, 0.8))

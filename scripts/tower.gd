@@ -121,7 +121,21 @@ func _fire_rate() -> float:
 				bonus += t.buff_value()
 			else:
 				bonus = maxf(bonus, t.buff_value())
-	return rate * (1.0 + bonus) * (1.0 + pack_bonus())
+	rate *= (1.0 + bonus) * (1.0 + pack_bonus())
+	if rivalry():
+		rate *= Difficulty.RIVALRY_RATE
+	return rate
+
+
+## Difficulté « Rivalité des ateliers » : trop de tours identiques tirent moins vite.
+func rivalry() -> bool:
+	if not Difficulty.active("rivalite"):
+		return false
+	var same := 0
+	for t in level.towers.values():
+		if is_instance_valid(t) and not t.is_queued_for_deletion() and t.type_id == type_id:
+			same += 1
+	return same >= Difficulty.RIVALRY_FROM
 
 
 ## Esprit de meute : +10 % de cadence par autre tour du même type, plafonné.
