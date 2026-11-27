@@ -69,7 +69,7 @@ Pour régler ce rythme : `FIRST_POINT_COST`, `CHEAP_POINTS` et `COST_STEP` dans 
 | Cadence | +1 % de vitesse de tir |
 | Économie | +5 or au départ de chaque vague |
 | Rempart | +1 vie au départ de l'expédition |
-| Chance | Jokers et reliques plus rares : chaque point rapproche les chances de 25 % commun, 50 % non commun, 20 % rare, 5 % légendaire (atteint à 10 points) |
+| Chance | Jokers et reliques plus rares. Chaque point rapproche les chances de leur maximum, atteint à 10 points : jokers 25 % commun, 50 % non commun, 20 % rare, 5 % légendaire ; reliques 22 / 50 / 20 / 8 % |
 | Préparation | 5 pts : une relique commune au départ ; 10 pts : un emplacement de joker en plus |
 | Forge | Arrivera avec la fusion des reliques |
 

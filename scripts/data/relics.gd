@@ -104,16 +104,17 @@ static func describe_short(id: String) -> String:
 	return DATA[id].get("short", describe(id))
 
 
-## Chances des raretés quand la stat Chance est au maximum (reliques et jokers).
+## Chances des raretés de relique quand la stat Chance est au maximum.
 ## Entre 0 et le maximum, les chances glissent en ligne droite des valeurs de base vers celles-ci.
-const MAX_LUCK_WEIGHTS := {"commun": 25.0, "non_commun": 50.0, "rare": 20.0, "legendaire": 5.0}
+## (Celles des jokers sont dans jokers.gd.)
+const MAX_LUCK_WEIGHTS := {"commun": 22.0, "non_commun": 50.0, "rare": 20.0, "legendaire": 8.0}
 
 
 ## Chances de chaque rareté avec la stat Chance (luck va de 0 à 1).
-static func lucky_weights(base: Dictionary, luck: float) -> Dictionary:
+static func lucky_weights(base: Dictionary, luck: float, target: Dictionary = MAX_LUCK_WEIGHTS) -> Dictionary:
 	var w := {}
 	for rar in RARITIES:
-		w[rar] = lerpf(float(base[rar]), MAX_LUCK_WEIGHTS[rar], clampf(luck, 0.0, 1.0))
+		w[rar] = lerpf(float(base[rar]), float(target[rar]), clampf(luck, 0.0, 1.0))
 	return w
 
 

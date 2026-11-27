@@ -10,6 +10,8 @@ const RARITIES := ["commun", "non_commun", "rare", "legendaire"]
 const RARITY_NAMES := {"commun": "Commun", "non_commun": "Peu commun", "rare": "Rare", "legendaire": "Légendaire"}
 ## Chances de tirer chaque rareté pour une carte joker (sur 100).
 const WEIGHTS := {"commun": 55, "non_commun": 30, "rare": 12, "legendaire": 3}
+## Chances quand la stat Chance est au maximum (10 points).
+const MAX_LUCK_WEIGHTS := {"commun": 25, "non_commun": 50, "rare": 20, "legendaire": 5}
 
 ## Réglages des jokers à effet chiffré (pour équilibrer facilement).
 const BUTIN_GOLD := 0.3          # Butin de fouille : +30 % d'or pendant les vagues
@@ -92,7 +94,7 @@ static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: in
 	for id in DATA:
 		if not id in held:
 			pools[DATA[id]["rarity"]].append(id)
-	var weights := Relics.lucky_weights(WEIGHTS, luck)
+	var weights := Relics.lucky_weights(WEIGHTS, luck, MAX_LUCK_WEIGHTS)
 	var result: Array[String] = []
 	for i in 3:
 		var allowed: Array = RARITIES.slice(2) if i < rare_slots else RARITIES
