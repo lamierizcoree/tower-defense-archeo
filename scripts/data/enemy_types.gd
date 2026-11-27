@@ -29,7 +29,7 @@ const DATA := {
 		"name": "fouisseur", "plural": "fouisseurs", "shape": "digger",
 		"hp": 35.0, "speed": 60.0, "radius": 13.0, "color": Color("9c6b3a"),
 		"damage": 1, "score": 10, "digs": true,
-		"ability": "Creuse sous les murs (un mur le ralentit sans l'arrêter), sauf sous les murs scellés.",
+		"ability": "Creuse sous les murs et prend toujours le chemin le plus court, sauf sous les murs scellés.",
 	},
 	"jarre": {
 		"name": "jarre", "plural": "jarres", "shape": "jar",

@@ -16,7 +16,6 @@ const KILL_REWARD := 3
 const WAVE_BONUS := 10
 const SPAWN_INTERVAL := 0.7
 const DUNES_PER_WAVE := 4
-const DIG_WEIGHT := 6.0     # un fouisseur « paie » 6 cases pour passer sous un mur
 const STORM_RANGE := 0.75
 const MACON_RANGE := 12.0
 const WAVE_INFO_RECT := Rect2(6, 34, 614, 24)   # zone de la ligne « Prochaine vague » à survoler
@@ -345,8 +344,7 @@ func _try_place_wall(cell: Vector2i) -> void:
 		_say("Ce mur bloquerait le chemin")
 		return
 
-	walls[cell] = true
-	dig_astar.set_point_weight_scale(cell, DIG_WEIGHT)
+	walls[cell] = true  # les fouisseurs l'ignorent : pour eux, un mur compte comme du sable
 	gold -= wall_cost()
 	_on_grid_changed()
 
@@ -379,7 +377,6 @@ func _remove_at(cell: Vector2i) -> void:
 	elif walls.has(cell):
 		walls.erase(cell)
 		astar.set_point_solid(cell, false)
-		dig_astar.set_point_weight_scale(cell, 1.0)
 		dig_astar.set_point_solid(cell, false)
 		sealed.erase(cell)
 		gold += wall_cost()
