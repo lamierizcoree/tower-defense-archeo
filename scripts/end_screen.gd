@@ -23,7 +23,7 @@ func _draw() -> void:
 	draw_string(font, Vector2(0, 160), title, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 40, Color("ffe066") if Run.victory else Color("ff8a7a"))
 	draw_string(font, Vector2(0, 205), sub, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 18, Color(1, 1, 1, 0.8))
 	var lines := [
-		"Score : %d   (meilleur : %d)" % [Run.score, Profile.best_score],
+		("Score : %d   (meilleur : %d)" % [Run.score, Profile.best_score]) + ("   dont +%d de difficulté" % Run.score_bonus if Run.score_bonus > 0 else ""),
 		"Niveaux réussis : %d" % Run.levels_cleared,
 		"Ennemis vaincus : %d" % Run.kills,
 		"",
@@ -43,4 +43,7 @@ func _draw() -> void:
 		var r := Relics.get_relic(next[1])
 		var text := "Prochaine relique débloquée au rang %d : %s" % [next[0], r["name"]]
 		draw_string(font, Vector2(0, 530), text, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 16, Relics.RARITY_COLORS[r["rarity"]])
+	if Run.difficulty_unlocked_now:
+		var d := Profile.difficulty_unlocked
+		draw_string(font, Vector2(0, 565), "%s débloquée ! %s" % [Difficulty.name_of(d), Difficulty.describe(d)], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 17, Color("ff8a5c"))
 	UI.button(self, BUTTON, "Retour au camp de base", BUTTON.has_point(get_global_mouse_position()))

@@ -7,6 +7,8 @@ const BTN_ABANDON := Rect2(330, 390, 300, 34)
 const BTN_CODEX := Rect2(330, 450, 300, 44)
 const BTN_UPGRADES := Rect2(330, 504, 300, 44)
 const BTN_RESET := Rect2(790, 690, 160, 32)
+const BTN_DIFF_DOWN := Rect2(330, 580, 44, 40)
+const BTN_DIFF_UP := Rect2(586, 580, 44, 40)
 
 var confirm_reset := false
 
@@ -31,6 +33,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().change_scene_to_file("res://scenes/codex.tscn")
 	elif BTN_UPGRADES.has_point(p):
 		get_tree().change_scene_to_file("res://scenes/upgrades.tscn")
+	elif BTN_DIFF_DOWN.has_point(p) and _can_choose_difficulty():
+		Profile.change_difficulty(-1)
+	elif BTN_DIFF_UP.has_point(p) and _can_choose_difficulty():
+		Profile.change_difficulty(1)
 	elif BTN_RESET.has_point(p):
 		if confirm_reset:
 			Profile.reset()
@@ -39,6 +45,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			confirm_reset = true
 		return
 	confirm_reset = false
+
+
+## On choisit la difficulté avant de partir, pas pendant une expédition.
+func _can_choose_difficulty() -> bool:
+	return Profile.difficulty_unlocked > 0 and not Run.started
 
 
 func _draw() -> void:
@@ -72,4 +83,23 @@ func _draw() -> void:
 	UI.button(self, BTN_CODEX, "Carnet des reliques et pouvoirs", BTN_CODEX.has_point(mouse))
 	var free := Profile.points_available() - Profile.points_used()
 	UI.button(self, BTN_UPGRADES, "Améliorations" + (" (%d à répartir)" % free if free > 0 else ""), BTN_UPGRADES.has_point(mouse))
+	_draw_difficulty(font, mouse)
 	UI.button(self, BTN_RESET, "Sûr ? Clique encore" if confirm_reset else "Effacer le profil", BTN_RESET.has_point(mouse), true, 12)
+
+
+## Sélecteur de difficulté, visible une fois la première expédition réussie.
+func _draw_difficulty(font: Font, mouse: Vector2) -> void:
+	if Profile.difficulty_unlocked == 0:
+		return
+	var level := Run.difficulty if Run.started else Profile.difficulty
+	var color := Color.WHITE if level == 0 else Color("ff8a5c")
+	var choose := _can_choose_difficulty()
+	UI.button(self, BTN_DIFF_DOWN, "<", BTN_DIFF_DOWN.has_point(mouse), choose and level > 0, 20)
+	UI.button(self, BTN_DIFF_UP, ">", BTN_DIFF_UP.has_point(mouse), choose and level < Profile.difficulty_unlocked, 20)
+	draw_string(font, Vector2(380, 607), Difficulty.name_of(level), HORIZONTAL_ALIGNMENT_CENTER, 200, 18, color)
+	var sub := Difficulty.describe(level)
+	if Run.started:
+		sub = "Expédition en cours  ·  " + sub
+	else:
+		sub += "  ·  débloquée jusqu'à %d" % Profile.difficulty_unlocked
+	draw_string(font, Vector2(0, 642), sub, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.6))

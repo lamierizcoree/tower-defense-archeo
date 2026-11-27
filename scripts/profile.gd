@@ -15,6 +15,8 @@ var runs := 0
 var victories := 0
 var bosses := {}              # identifiant du boss -> nombre de victoires
 var alloc := {}               # catégorie d'amélioration -> points
+var difficulty_unlocked := 0  # plus haut niveau de difficulté débloqué (voir data/difficulty.gd)
+var difficulty := 0           # niveau choisi pour la prochaine expédition
 
 
 func _ready() -> void:
@@ -38,6 +40,8 @@ func load_profile() -> void:
 	runs = int(data.get("runs", 0))
 	victories = int(data.get("victories", 0))
 	bosses = data.get("bosses", {})
+	difficulty_unlocked = clampi(int(data.get("difficulty_unlocked", 0)), 0, Difficulty.MAX)
+	difficulty = clampi(int(data.get("difficulty", 0)), 0, difficulty_unlocked)
 	alloc = {}
 	var saved_alloc: Dictionary = data.get("alloc", {})
 	for k in saved_alloc:
@@ -52,6 +56,7 @@ func save_profile() -> void:
 	file.store_string(JSON.stringify({
 		"rank": rank, "total_score": total_score, "best_score": best_score,
 		"runs": runs, "victories": victories, "bosses": bosses, "alloc": alloc,
+		"difficulty_unlocked": difficulty_unlocked, "difficulty": difficulty,
 	}, "  "))
 
 
@@ -64,6 +69,8 @@ func reset() -> void:
 	victories = 0
 	bosses = {}
 	alloc = {}
+	difficulty_unlocked = 0
+	difficulty = 0
 	save_profile()
 
 
@@ -104,10 +111,20 @@ func run_finished(score: int, victory: bool) -> int:
 	runs += 1
 	if victory:
 		victories += 1
+		# Réussir au niveau le plus haut débloqué ouvre le suivant.
+		if Run.difficulty >= difficulty_unlocked and difficulty_unlocked < Difficulty.MAX:
+			difficulty_unlocked += 1
+			Run.difficulty_unlocked_now = true
 	total_score += score
 	best_score = maxi(best_score, score)
 	save_profile()
 	return points_earned() - before
+
+
+## Change la difficulté choisie au camp de base (step = -1 ou +1).
+func change_difficulty(step: int) -> void:
+	difficulty = clampi(difficulty + step, 0, difficulty_unlocked)
+	save_profile()
 
 
 # --- Améliorations -----------------------------------------------------------

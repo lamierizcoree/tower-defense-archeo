@@ -353,9 +353,9 @@ func earn(amount: int) -> void:
 	gold_rest -= whole
 
 
-## Multiplicateur de PV des ennemis d'une vague (Trésor maudit compris).
+## Multiplicateur de PV des ennemis d'une vague (difficulté et Trésor maudit compris).
 func enemy_hp_mult(index: int) -> float:
-	var m: float = waves[index]["hp_mult"]
+	var m: float = waves[index]["hp_mult"] * Difficulty.hp_mult(Run.difficulty)
 	if Run.has_joker("maudit"):
 		m *= Jokers.MAUDIT_HP
 	return m
@@ -665,6 +665,8 @@ func _draw() -> void:
 func _draw_hud(font: Font) -> void:
 	var type_names := {"combat": "", "elite": "  ·  ÉLITE", "boss": "  ·  BOSS"}
 	var title := "%s · %s%s" % [biome["name"], layout["name"], type_names[node["type"]]]
+	if Run.difficulty > 0:
+		title += "  ·  D%d" % Run.difficulty
 	draw_string(font, Vector2(12, 24), title, HORIZONTAL_ALIGNMENT_LEFT, 470, 17, Color.WHITE)
 	var stats := "Vies %d    Or %d    Vague %d/%d" % [Run.lives, gold, wave_index + 1, waves.size()]
 	if Engine.time_scale > 1.0:

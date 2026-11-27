@@ -75,6 +75,10 @@ Pour régler ce rythme : `FIRST_POINT_COST`, `CHEAP_POINTS` et `COST_STEP` dans 
 
 Le profil est sauvegardé automatiquement (fichier `profil.json` dans le dossier de données de Godot). Le bouton « Effacer le profil » du camp de base le remet à zéro.
 
+### Niveaux de difficulté
+
+Réussir une expédition débloque le niveau de difficulté suivant (jusqu'à 10). On le choisit au camp de base avec les flèches, avant de partir. Chaque niveau s'ajoute aux précédents : **+20 % de PV pour tous les ennemis** par niveau (+60 % au niveau 3), et en échange **+15 % de score** par niveau, donc plus de points d'amélioration. Pour débloquer le niveau suivant, il faut réussir au niveau le plus haut déjà débloqué. Les réglages sont dans `scripts/data/difficulty.gd`.
+
 ## L'expédition
 
 1. **La carte** : on choisit son prochain niveau parmi ceux entourés. ⚔ = combat (2 vagues), ! = élite (3 vagues plus dures, une récompense rare garantie), ☠ = boss (3 vagues, le boss arrive à la dernière).
