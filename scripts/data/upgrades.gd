@@ -21,7 +21,7 @@ const DATA := {
 	"cadence": {"name": "Cadence", "desc": "+1 % de vitesse de tir"},
 	"economie": {"name": "Économie", "desc": "+5 or au départ de chaque vague"},
 	"rempart": {"name": "Rempart", "desc": "+1 vie au départ de l'expédition"},
-	"chance": {"name": "Chance", "desc": "+1 % de chances de joker rare et de relique plus rare"},
+	"chance": {"name": "Chance", "desc": "Jokers et reliques plus rares. À 10 pts : 25 % commun, 50 % peu commun, 20 % rare, 5 % légendaire"},
 	"preparation": {"name": "Préparation", "desc": "5 pts : une relique commune au départ. 10 pts : un emplacement de joker en plus"},
 	"forge": {"name": "Forge", "desc": "-3 % sur le coût des fusions (arrive avec la fusion des reliques)", "disabled": true},
 }

@@ -180,8 +180,9 @@ func bonus_lives() -> int:
 	return level_of("rempart")
 
 
+## Stat Chance, de 0 (aucun point) à 1 (10 points) : voir Relics.lucky_weights.
 func luck() -> float:
-	return 0.01 * level_of("chance")
+	return float(level_of("chance")) / Upgrades.MAX_PER_CATEGORY
 
 
 func max_jokers() -> int:
