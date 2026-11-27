@@ -4,6 +4,8 @@ extends RefCounted
 ## On les gagne dans les récompenses. Pendant un niveau, on les pose dans les tours
 ## avec la barre de reliques ; elles reviennent dans l'inventaire au niveau suivant.
 ##
+## unlock : rang d'archéologue nécessaire pour trouver la relique (voir profile.gd).
+##
 ## Bonus en pourcentage (0.15 = +15 %) :
 ##   damage : dégâts      rate : cadence de tir      range : portée
 ##   effect : effets spéciaux (ralentissement, poison, rayon d'explosion, bonus du Totem)
@@ -30,27 +32,31 @@ const WEIGHTS := {"commun": 50, "non_commun": 30, "rare": 15, "legendaire": 5}
 
 const DATA := {
 	# --- Communes : +15 % ---
-	"silex": {"name": "Pointe de silex", "rarity": "commun", "damage": 0.15},
-	"plume": {"name": "Plume de vautour", "rarity": "commun", "rate": 0.15},
-	"lentille": {"name": "Lentille fêlée", "rarity": "commun", "range": 0.15},
+	"silex": {"name": "Pointe de silex", "rarity": "commun", "unlock": 0, "damage": 0.15},
+	"plume": {"name": "Plume de vautour", "rarity": "commun", "unlock": 0, "rate": 0.15},
+	"lentille": {"name": "Lentille fêlée", "rarity": "commun", "unlock": 0, "range": 0.15},
 	# --- Peu communes : +25 % ---
-	"amulette": {"name": "Amulette de bronze", "rarity": "non_commun", "damage": 0.25},
-	"rouage": {"name": "Rouage ancien", "rarity": "non_commun", "rate": 0.25},
-	"longue_vue": {"name": "Longue-vue de cuivre", "rarity": "non_commun", "range": 0.25},
-	"ambre": {"name": "Ambre fossile", "rarity": "non_commun", "effect": 0.3},
+	"amulette": {"name": "Amulette de bronze", "rarity": "non_commun", "unlock": 0, "damage": 0.25},
+	"rouage": {"name": "Rouage ancien", "rarity": "non_commun", "unlock": 0, "rate": 0.25},
+	"longue_vue": {"name": "Longue-vue de cuivre", "rarity": "non_commun", "unlock": 2, "range": 0.25},
+	"ambre": {"name": "Ambre fossile", "rarity": "non_commun", "unlock": 4, "effect": 0.3},
 	# --- Rares : +40 % et un second bonus ---
-	"scarabee_or": {"name": "Scarabée d'or", "rarity": "rare", "damage": 0.4, "range": 0.15},
-	"sablier_quartz": {"name": "Sablier de quartz", "rarity": "rare", "rate": 0.4, "damage": 0.15},
-	"oeil_faucon": {"name": "Œil de faucon", "rarity": "rare", "range": 0.4, "rate": 0.15},
-	"cristal": {"name": "Cristal des glaces", "rarity": "rare", "effect": 0.6, "range": 0.15},
-	"sceau": {"name": "Sceau de granit", "rarity": "rare", "seal": true, "range": 0.15,
+	"scarabee_or": {"name": "Scarabée d'or", "rarity": "rare", "unlock": 0, "damage": 0.4, "range": 0.15},
+	"sablier_quartz": {"name": "Sablier de quartz", "rarity": "rare", "unlock": 6, "rate": 0.4, "damage": 0.15},
+	"oeil_faucon": {"name": "Œil de faucon", "rarity": "rare", "unlock": 8, "range": 0.4, "rate": 0.15},
+	"cristal": {"name": "Cristal des glaces", "rarity": "rare", "unlock": 12, "effect": 0.6, "range": 0.15},
+	"sceau": {"name": "Sceau de granit", "rarity": "rare", "unlock": 5, "seal": true, "range": 0.15,
+		"short": "Murs à portée impossibles à creuser par les fouisseurs, +15 % de portée.",
 		"desc": "Les murs à portée de la tour ne peuvent plus être creusés : les fouisseurs doivent faire le tour. +15 % de portée."},
 	# --- Légendaires : gros bonus, mais il faut adapter son labyrinthe ---
-	"lance": {"name": "Lance du Pharaon", "rarity": "legendaire", "damage_x": 4.0, "line": true,
+	"lance": {"name": "Lance du Pharaon", "rarity": "legendaire", "unlock": 5, "damage_x": 4.0, "line": true,
+		"short": "Dégâts x4, mais tir en ligne droite sur sa portée de base (E pour tourner).",
 		"desc": "Dégâts x4. La tour ne vise plus autour d'elle : elle tire en ligne droite dans une direction (touche E pour tourner), sur autant de cases que sa portée de base, et touche tout ce qui est sur la ligne."},
-	"couronne": {"name": "Couronne du Scarabée-Roi", "rarity": "legendaire", "damage_x": 3.0, "rate_x": 1.5, "fixed_range": 72.0,
+	"couronne": {"name": "Couronne du Scarabée-Roi", "rarity": "legendaire", "unlock": 10, "damage_x": 3.0, "rate_x": 1.5, "fixed_range": 72.0,
+		"short": "Dégâts x3 et cadence x1,5, mais portée de 1,5 case.",
 		"desc": "Dégâts x3 et cadence x1,5, mais la portée tombe à 1,5 case : la tour doit être collée au chemin."},
-	"coeur": {"name": "Cœur du Colosse gelé", "rarity": "legendaire", "rate_x": 3.0, "only_slowed": true,
+	"coeur": {"name": "Cœur du Colosse gelé", "rarity": "legendaire", "unlock": 15, "rate_x": 3.0, "only_slowed": true,
+		"short": "Cadence x3, mais ne vise que les ennemis ralentis.",
 		"desc": "Cadence x3, mais la tour ne vise que les ennemis déjà ralentis. À combiner avec le Givre."},
 }
 
@@ -76,21 +82,34 @@ static func describe(id: String) -> String:
 	return ", ".join(parts)
 
 
-## Tire une relique au hasard. min_rarity force une rareté minimale (élite, boss).
-static func draw(rng: RandomNumberGenerator, min_rarity := "commun") -> String:
+## Description courte (carnet) : le champ « short » s'il existe, sinon la description complète.
+static func describe_short(id: String) -> String:
+	return DATA[id].get("short", describe(id))
+
+
+## Tire une relique débloquée au hasard. min_rarity force une rareté minimale (élite, boss).
+## luck = chance de monter d'une rareté (amélioration Chance).
+## Si aucune relique de la rareté tirée n'est débloquée, on descend d'une rareté.
+static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0, unlocked: Callable = Callable()) -> String:
 	var allowed := RARITIES.slice(RARITIES.find(min_rarity))
 	var total := 0
 	for rar in allowed:
 		total += WEIGHTS[rar]
 	var roll := rng.randi_range(1, total)
-	var rarity: String = allowed[0]
+	var index := RARITIES.find(allowed[0])
 	for rar in allowed:
 		roll -= WEIGHTS[rar]
 		if roll <= 0:
-			rarity = rar
+			index = RARITIES.find(rar)
 			break
-	var pool := []
-	for id in DATA:
-		if DATA[id]["rarity"] == rarity:
-			pool.append(id)
-	return pool[rng.randi_range(0, pool.size() - 1)]
+	if index < RARITIES.size() - 1 and rng.randf() < luck:
+		index += 1
+	while index >= 0:
+		var pool := []
+		for id in DATA:
+			if DATA[id]["rarity"] == RARITIES[index] and (not unlocked.is_valid() or unlocked.call(id)):
+				pool.append(id)
+		if not pool.is_empty():
+			return pool[rng.randi_range(0, pool.size() - 1)]
+		index -= 1
+	return "silex"

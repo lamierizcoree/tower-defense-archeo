@@ -8,6 +8,8 @@ const STEP_X := 185.0
 const TOP := 190.0
 const HEIGHT := 360.0
 
+const CODEX_BUTTON := Rect2(800, 20, 140, 34)
+
 var hovered := Vector2i(-1, -1)
 
 
@@ -35,6 +37,10 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if CODEX_BUTTON.has_point(get_global_mouse_position()):
+			Run.codex_return = "res://scenes/map.tscn"
+			get_tree().change_scene_to_file("res://scenes/codex.tscn")
+			return
 		var n := _node_at(get_global_mouse_position())
 		if n in Run.reachable():
 			Run.enter_level(n)
@@ -45,6 +51,7 @@ func _draw() -> void:
 	var biome := Run.biome()
 	var colors: Dictionary = biome["colors"]
 	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), colors["background"])
+	UI.button(self, CODEX_BUTTON, "Carnet", CODEX_BUTTON.has_point(get_global_mouse_position()))
 
 	# En-tête : biome et règles
 	var title := "Biome %d/%d : %s, %s" % [Run.biome_index + 1, Biomes.count(), biome["name"], biome["subtitle"]]
@@ -99,7 +106,7 @@ func _draw() -> void:
 
 	# Pied de page : état de l'expédition
 	var footer := "Vies %d    Score %d    Reliques %d/%d    Jokers (%d/%d) : %s" % [
-		Run.lives, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Jokers.MAX_HELD, _joker_names()]
+		Run.lives, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Profile.max_jokers(), _joker_names()]
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 48), footer, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 360, 15, Color.WHITE)
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 22), "Clique sur un niveau entouré pour avancer.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.55))
 

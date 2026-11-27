@@ -28,6 +28,43 @@ Pour voir les détails, passe la souris :
 - sur la ligne « Prochaine vague » (ⓘ) : nombre d'ennemis de chaque type, points de vie, vitesse, vies perdues s'ils s'échappent et capacités spéciales ;
 - sur un ennemi : ses points de vie restants et ses effets en cours.
 
+## Le camp de base
+
+Le jeu démarre au camp de base :
+- **Nouvelle expédition** (ou **Continuer** si une expédition est en cours).
+- **Carnet des reliques et pouvoirs** : la liste de toutes les reliques et de tous les jokers. Les reliques pas encore débloquées sont masquées, avec le rang qui les débloque. Le carnet s'ouvre aussi depuis la carte (bouton en haut à droite).
+- **Améliorations** : on répartit ses points d'amélioration.
+
+### Progression
+
+- **Rang d'archéologue** : +1 à chaque niveau réussi, toutes expéditions confondues. Chaque rang débloque de nouvelles reliques, qui peuvent alors apparaître dans les récompenses.
+
+| Rang | Reliques débloquées |
+|---|---|
+| 0 | Pointe de silex, Plume de vautour, Lentille fêlée, Amulette de bronze, Rouage ancien, Scarabée d'or |
+| 2 | Longue-vue de cuivre |
+| 4 | Ambre fossile |
+| 5 | Sceau de granit, Lance du Pharaon |
+| 6 | Sablier de quartz |
+| 8 | Œil de faucon |
+| 10 | Couronne du Scarabée-Roi |
+| 12 | Cristal des glaces |
+| 15 | Cœur du Colosse gelé |
+
+- **Points d'amélioration** : le score de chaque expédition s'ajoute au score cumulé, et chaque tranche de 1 000 points donne 1 point. On peut utiliser au plus 50 points, et les redistribuer librement entre deux expéditions.
+
+| Catégorie | Effet par point (10 points au maximum) |
+|---|---|
+| Puissance | +1 % de dégâts |
+| Cadence | +1 % de vitesse de tir |
+| Économie | +5 or au départ de chaque vague |
+| Rempart | +1 vie au départ de l'expédition |
+| Chance | +1 % de joker rare et de relique plus rare |
+| Préparation | 5 pts : une relique commune au départ ; 10 pts : un emplacement de joker en plus |
+| Forge | Arrivera avec la fusion des reliques |
+
+Le profil est sauvegardé automatiquement (fichier `profil.json` dans le dossier de données de Godot). Le bouton « Effacer le profil » du camp de base le remet à zéro.
+
 ## L'expédition
 
 1. **La carte** : on choisit son prochain niveau parmi ceux entourés. ⚔ = combat (2 vagues), ! = élite (3 vagues plus dures, une récompense rare garantie), ☠ = boss (3 vagues, le boss arrive à la dernière).
@@ -104,12 +141,13 @@ Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ral
 
 ## Organisation du code
 
-- `scenes/` : les 4 écrans (carte, niveau, récompense, fin). La carte est lancée au démarrage.
+- `scenes/` : les écrans (camp de base, carnet, améliorations, carte, niveau, récompense, fin). Le camp de base est lancé au démarrage.
 - `scripts/run_state.gd` : l'expédition en cours (vies, jokers, score, carte), accessible partout sous le nom `Run`.
+- `scripts/profile.gd` : le profil sauvegardé (rang, score cumulé, points répartis), accessible partout sous le nom `Profile`.
 - `scripts/map_gen.gd` : création de la carte à embranchements.
 - `scripts/level.gd` : un niveau (murs, pathfinding `AStarGrid2D`, vagues, dunes, tempête, affichage).
 - `scripts/map_screen.gd`, `scripts/reward_screen.gd`, `scripts/end_screen.gd` : les autres écrans.
-- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques).
+- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques, améliorations).
 - `scripts/grid.gd` : taille de la grille, conversions case ↔ pixels.
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
 - `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).
