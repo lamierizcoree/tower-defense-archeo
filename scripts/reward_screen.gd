@@ -159,10 +159,12 @@ func _draw() -> void:
 		else:
 			var j := Jokers.get_joker(card["id"])
 			card_name = j["name"]
-			if j["rare"]:
-				border = Color("ffd54a")
+			border = Jokers.color_of(card["id"])
+			if j["rarity"] == "legendaire":
+				bg = Color("3d2c1a")
+			elif j["rarity"] == "rare":
 				bg = Color("3a2f45")
-			kind_label = "JOKER · " + ("RARE" if j["rare"] else "COMMUN")
+			kind_label = "JOKER · " + Jokers.RARITY_NAMES[j["rarity"]].to_upper()
 			desc = j["desc"]
 		draw_rect(r, bg)
 		draw_rect(r, border, false, 4.0 if (hot or chosen) else 2.0)
@@ -188,7 +190,7 @@ func _draw() -> void:
 		if i < Run.jokers.size():
 			var j := Jokers.get_joker(Run.jokers[i])
 			draw_string(font, r.position + Vector2(0, 26), j["name"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Color.WHITE)
-			draw_string(font, r.position + Vector2(0, 48), "rare" if j["rare"] else "commun", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 12, Color(1, 1, 1, 0.5))
+			draw_string(font, r.position + Vector2(0, 48), Jokers.RARITY_NAMES[j["rarity"]].to_lower(), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 12, Jokers.color_of(Run.jokers[i]))
 		else:
 			draw_string(font, r.position + Vector2(0, 38), "vide", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, Color(1, 1, 1, 0.3))
 	draw_string(font, Vector2(0, 612), "Tes jokers (%d/%d)" % [Run.jokers.size(), Profile.max_jokers()], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))

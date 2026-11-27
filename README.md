@@ -113,24 +113,30 @@ Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ral
 
 ### Les jokers
 
-| Joker | Effet |
-|---|---|
-| Maçon | Chaque mur ou rocher collé à une tour lui donne +12 de portée |
-| Cul-de-sac | Une tour bloquée sur 3 côtés ou plus inflige double dégâts |
-| Pillard | Chaque ennemi qui s'échappe rapporte 6 or |
-| Briques creuses | Les murs coûtent 1 or |
-| Prime de chasse | +2 or par ennemi tué |
-| Long détour | Au début de chaque vague, +1 or toutes les 3 cases du chemin |
-| Givre éternel | Ralentissements plus longs et plus forts |
-| Venin glacé | Le poison fait double dégâts aux ennemis ralentis |
-| Artilleur | Explosions du Mortier 50 % plus larges |
-| Totems ancestraux | Les bonus de plusieurs Totems se cumulent |
-| Fondations | Tours 25 % moins chères |
-| Rempart | +2 vies au début de chaque niveau |
-| Écho (rare) | Les tirs d'Arbalète et de Baliste rebondissent sur un 2e ennemi |
-| Fiole instable (rare) | Un ennemi empoisonné qui meurt explose |
-| Sablier ancien (rare) | Première vague de chaque niveau : ennemis 30 % plus lents |
-| Écrin double (rare) | Chaque tour peut porter 2 reliques (toujours une seule légendaire) |
+Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chances sont : commun 55 %, non commun 30 %, rare 12 %, légendaire 3 %. Après une élite, une carte est au moins rare ; après un boss, deux cartes. Les réglages sont en haut de `scripts/data/jokers.gd`.
+
+| Rareté | Joker | Effet |
+|---|---|---|
+| Commun | Maçon | Chaque mur ou rocher collé à une tour lui donne +12 de portée |
+| Commun | Pillard | Chaque ennemi qui s'échappe rapporte 6 or |
+| Commun | Briques creuses | Les murs coûtent 1 or |
+| Commun | Prime de chasse | +2 or par ennemi tué |
+| Commun | Fondations | Tours 25 % moins chères |
+| Commun | Rempart | +2 vies au début de chaque niveau |
+| Non commun | Butin de fouille | +30 % d'or gagné pendant les vagues |
+| Non commun | Cul-de-sac | Une tour bloquée sur 3 côtés ou plus inflige double dégâts |
+| Non commun | Long détour | Au début de chaque vague, +1 or toutes les 3 cases du chemin |
+| Non commun | Givre éternel | Ralentissements plus longs et plus forts |
+| Non commun | Venin glacé | Le poison fait double dégâts aux ennemis ralentis |
+| Non commun | Artilleur | Explosions du Mortier 50 % plus larges |
+| Non commun | Totems ancestraux | Les bonus de plusieurs Totems se cumulent |
+| Rare | Écho | Les tirs d'Arbalète et de Baliste rebondissent sur un 2e ennemi |
+| Rare | Fiole instable | Un ennemi empoisonné qui meurt explose |
+| Rare | Sablier ancien | Première vague de chaque niveau : ennemis 30 % plus lents |
+| Rare | Écrin double | Chaque tour peut porter 2 reliques (toujours une seule légendaire) |
+| Légendaire | Esprit de meute | +10 % de cadence par autre tour du même type posée (+50 % au maximum) |
+| Légendaire | Trésor maudit | Or gagné pendant les vagues x2, mais ennemis +25 % de PV |
+| Légendaire | Architecte fou | Murs gratuits, mais tours +50 % plus chères |
 
 ## Les tours
 

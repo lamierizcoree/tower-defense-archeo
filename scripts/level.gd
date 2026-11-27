@@ -47,6 +47,7 @@ var wave_running := false
 var storm := false
 
 var gold := 0
+var gold_rest := 0.0   # morceaux d'or pas encore entiers (voir earn)
 var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
 var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
 var ended := false
@@ -147,7 +148,7 @@ func _end_wave() -> void:
 		_say("Niveau réussi !", 99.0)
 		get_tree().create_timer(1.5).timeout.connect(Run.level_won)
 		return
-	gold += WAVE_BONUS
+	earn(WAVE_BONUS)
 	_shift_dunes()
 	_say("Vague terminée ! +%d or" % WAVE_BONUS)
 
@@ -162,7 +163,7 @@ func _spawn_enemy(type_id: String) -> void:
 	var speed_mult: float = biome["enemy_speed"]
 	if wave_index == 0 and Run.has_joker("sablier"):
 		speed_mult *= 0.7
-	_add_enemy(type_id, start, waves[wave_index]["hp_mult"], speed_mult)
+	_add_enemy(type_id, start, enemy_hp_mult(wave_index), speed_mult)
 
 
 func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: float) -> Enemy:
@@ -180,7 +181,7 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 
 
 func _on_enemy_died(e: Enemy) -> void:
-	gold += e.data.get("gold", KILL_REWARD) + (2 if Run.has_joker("prime") else 0)
+	earn(e.data.get("gold", KILL_REWARD) + (2 if Run.has_joker("prime") else 0))
 	Run.score += e.data["score"]
 	Run.kills += 1
 	if e.is_boss():
@@ -201,7 +202,7 @@ func _on_enemy_reached_goal(e: Enemy) -> void:
 		return
 	Run.lives -= e.data["damage"]
 	if Run.has_joker("pillard"):
-		gold += 6
+		earn(6)
 	if Run.lives <= 0:
 		Run.lives = 0
 		ended = true
@@ -314,14 +315,41 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func wall_cost() -> int:
+	if Run.has_joker("architecte"):
+		return 0
 	return 1 if Run.has_joker("briques") else WALL_COST
 
 
 func tower_cost(id: String) -> int:
-	var cost: int = TowerTypes.get_type(id)["cost"]
+	var cost: float = TowerTypes.get_type(id)["cost"]
 	if Run.has_joker("fondations"):
-		cost = int(ceil(cost * 0.75))
-	return cost
+		cost *= 0.75
+	if Run.has_joker("architecte"):
+		cost *= Jokers.ARCHITECTE_TOWER
+	return int(ceil(cost))
+
+
+## Or gagné pendant une vague (ennemis tués, fin de vague, Pillard).
+## Butin de fouille et Trésor maudit l'augmentent. Les centimes sont gardés de côté
+## pour qu'un +30 % sur 3 or ne soit pas perdu à l'arrondi.
+func earn(amount: int) -> void:
+	var mult := 1.0
+	if Run.has_joker("butin"):
+		mult += Jokers.BUTIN_GOLD
+	if Run.has_joker("maudit"):
+		mult *= Jokers.MAUDIT_GOLD
+	gold_rest += amount * mult
+	var whole := int(gold_rest)
+	gold += whole
+	gold_rest -= whole
+
+
+## Multiplicateur de PV des ennemis d'une vague (Trésor maudit compris).
+func enemy_hp_mult(index: int) -> float:
+	var m: float = waves[index]["hp_mult"]
+	if Run.has_joker("maudit"):
+		m *= Jokers.MAUDIT_HP
+	return m
 
 
 func _try_place_wall(cell: Vector2i) -> void:
@@ -821,6 +849,8 @@ func _tower_panel(id: String, t: Tower) -> Array:
 			lines.append(_line("Tours à portée : +%d %% de cadence" % roundi(buff * 100)))
 			if Run.has_joker("ancetres"):
 				lines.append(_line("Totems ancestraux : les bonus se cumulent", 13, Color("ffd54a")))
+	if t and t.pack_bonus() > 0.0:
+		lines.append(_line("Esprit de meute : +%d %% de cadence" % roundi(t.pack_bonus() * 100), 13, Relics.RARITY_COLORS["legendaire"]))
 	if t and t.legendary("only_slowed", false):
 		lines.append(_line("Ne vise que les ennemis ralentis", 13, Relics.RARITY_COLORS["legendaire"]))
 	if biome["tower_cadence"] < 1.0:
@@ -883,7 +913,7 @@ func _relic_panel(index: int) -> Array:
 
 func _wave_panel(index: int) -> Array:
 	var wave: Dictionary = waves[index]
-	var hp_mult: float = wave["hp_mult"]
+	var hp_mult: float = enemy_hp_mult(index)
 	var speed_mult: float = biome["enemy_speed"]
 	var counts := {}
 	var order := []

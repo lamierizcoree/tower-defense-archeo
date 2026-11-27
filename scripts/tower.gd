@@ -121,7 +121,18 @@ func _fire_rate() -> float:
 				bonus += t.buff_value()
 			else:
 				bonus = maxf(bonus, t.buff_value())
-	return rate * (1.0 + bonus)
+	return rate * (1.0 + bonus) * (1.0 + pack_bonus())
+
+
+## Esprit de meute : +10 % de cadence par autre tour du même type, plafonné.
+func pack_bonus() -> float:
+	if not Run.has_joker("meute"):
+		return 0.0
+	var same := 0
+	for t in level.towers.values():
+		if t != self and is_instance_valid(t) and not t.is_queued_for_deletion() and t.type_id == type_id:
+			same += 1
+	return minf(same * Jokers.MEUTE_PER_TOWER, Jokers.MEUTE_MAX)
 
 
 func _damage() -> float:
