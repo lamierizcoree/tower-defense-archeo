@@ -6,6 +6,7 @@ const TABS := ["Reliques", "Jokers"]
 const BTN_BACK := Rect2(20, 20, 120, 34)
 const ROW_TOP := 120.0
 const ROW_H := 39.0
+const ROW_BOTTOM := 700.0   # les lignes se resserrent si la liste est trop longue
 
 var tab := 0
 
@@ -56,10 +57,13 @@ func _draw() -> void:
 		_draw_jokers(font)
 
 
+var row_h := ROW_H
+
+
 func _draw_row(font: Font, i: int, color: Color, title: String, label: String, desc: String, dim := false) -> void:
-	var y := ROW_TOP + i * ROW_H
+	var y := ROW_TOP + i * row_h
 	if i % 2 == 0:
-		draw_rect(Rect2(20, y - 4, Grid.SCREEN.x - 40, ROW_H), Color(1, 1, 1, 0.03))
+		draw_rect(Rect2(20, y - 4, Grid.SCREEN.x - 40, row_h), Color(1, 1, 1, 0.03))
 	draw_circle(Vector2(40, y + 15), 7.0, color if not dim else Color(color, 0.3))
 	var text_color := Color.WHITE if not dim else Color(1, 1, 1, 0.4)
 	draw_string(font, Vector2(56, y + 20), title, HORIZONTAL_ALIGNMENT_LEFT, 230, 15, text_color)
@@ -69,6 +73,7 @@ func _draw_row(font: Font, i: int, color: Color, title: String, label: String, d
 
 func _draw_relics(font: Font) -> void:
 	var ids := _relic_ids()
+	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / ids.size())
 	var unlocked := 0
 	for i in ids.size():
 		var id: String = ids[i]
@@ -80,7 +85,7 @@ func _draw_relics(font: Font) -> void:
 			_draw_row(font, i, color, r["name"], label, Relics.describe_short(id))
 		else:
 			_draw_row(font, i, color, "? ? ?", label, "Se débloque au rang d'archéologue %d (tu es au rang %d)." % [r["unlock"], Profile.rank], true)
-	var foot := "%d reliques débloquées sur %d  ·  emplacements : Arbalète 2, Baliste 1, Mortier 2, Givre 2, Alambic 2, Totem 3" % [unlocked, ids.size()]
+	var foot := "%d reliques débloquées sur %d  ·  1 relique par tour (2 avec Écrin double), une seule légendaire" % [unlocked, ids.size()]
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
 
 
@@ -90,6 +95,7 @@ func _draw_jokers(font: Font) -> void:
 		for id in Jokers.DATA:
 			if Jokers.DATA[id]["rare"] == rare:
 				ids.append(id)
+	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / ids.size())
 	for i in ids.size():
 		var j := Jokers.get_joker(ids[i])
 		var color := Color("ffd54a") if j["rare"] else Color("c9b48a")
