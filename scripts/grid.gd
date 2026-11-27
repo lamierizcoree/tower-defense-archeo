@@ -6,7 +6,7 @@ const COLS := 20          # nombre de colonnes
 const ROWS := 12          # nombre de lignes
 const CELL := 48          # taille d'une case en pixels
 const OFFSET := Vector2(0, 64)  # la grille commence sous la barre d'infos
-const SCREEN := Vector2(960, 688)
+const SCREEN := Vector2(960, 736)
 
 const DIRS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 

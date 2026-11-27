@@ -19,6 +19,7 @@ Prototype du tower defense roguelite en labyrinthe. Une expédition traverse 2 b
 | 2 à 7 | Choisir une tour |
 | Espace | Lancer la vague suivante |
 | F | Vitesse x2 |
+| E | Tourner une tour qui porte la Lance du Pharaon (souris sur la tour) |
 
 Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur la barre du bas pour choisir quoi construire.
 
@@ -31,7 +32,7 @@ Pour voir les détails, passe la souris :
 
 1. **La carte** : on choisit son prochain niveau parmi ceux entourés. ⚔ = combat (2 vagues), ! = élite (3 vagues plus dures, une récompense rare garantie), ☠ = boss (3 vagues, le boss arrive à la dernière).
 2. **Le niveau** : on repart d'une grille vide avec de l'or neuf. Les vies, elles, se gardent d'un niveau à l'autre.
-3. **La récompense** : 1 joker parmi 3, ou passer pour gagner 3 vies. On garde 5 jokers au maximum : au-delà, il faut en abandonner un.
+3. **La récompense** : 1 carte parmi 3 (joker ou relique), ou passer pour gagner 3 vies. On garde 5 jokers et 8 reliques au maximum : au-delà, il faut en abandonner un.
 4. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
 
 ### Les biomes
@@ -42,6 +43,32 @@ Pour voir les détails, passe la souris :
 | Glace | Les ennemis vont deux fois plus vite sur les cases gelées. Les tours tirent 15 % moins vite. Plus de colosses. Boss : le Colosse gelé. |
 
 Chaque biome a 5 niveaux et une salle de boss, dessinés à la main dans `scripts/data/levels.gd`.
+
+### Les reliques
+
+Les reliques sont des artefacts déterrés qu'on place dans les emplacements des tours. On les trouve dans les récompenses : parfois après un combat, toujours une rare ou légendaire après une élite, et une légendaire après un boss. On en garde 8 au maximum.
+
+Pendant un niveau, la barre du bas montre tes reliques. Clique sur une relique, puis sur une tour, pour l'y poser. Clique sur une relique déjà posée pour la retirer. Une tour vendue rend ses reliques, et toutes les reliques reviennent dans l'inventaire au niveau suivant.
+
+| Tour | Emplacements |
+|---|---|
+| Arbalète | 2 |
+| Baliste | 1 |
+| Mortier | 2 |
+| Givre | 2 |
+| Alambic | 2 |
+| Totem | 3 (pas de légendaire) |
+
+| Rareté | Reliques | Effet |
+|---|---|---|
+| Commune | Pointe de silex, Plume de vautour, Lentille fêlée | +15 % dégâts, cadence ou portée |
+| Peu commune | Amulette de bronze, Rouage ancien, Longue-vue de cuivre, Ambre fossile | +25 % dégâts, cadence ou portée, ou +30 % effets spéciaux |
+| Rare | Scarabée d'or, Sablier de quartz, Œil de faucon, Cristal des glaces | +40 % sur une stat et +15 % sur une autre |
+| Légendaire | Lance du Pharaon | Dégâts x4, mais la tour tire en ligne droite dans une direction (E pour tourner), sur autant de cases que sa portée de base |
+| Légendaire | Couronne du Scarabée-Roi | Dégâts x3 et cadence x1,5, mais portée de 1,5 case |
+| Légendaire | Cœur du Colosse gelé | Cadence x3, mais ne vise que les ennemis ralentis |
+
+Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ralentissement, la force du poison, le rayon d'explosion et le bonus du Totem.
 
 ### Les jokers
 
@@ -81,7 +108,7 @@ Chaque biome a 5 niveaux et une salle de boss, dessinés à la main dans `script
 - `scripts/map_gen.gd` : création de la carte à embranchements.
 - `scripts/level.gd` : un niveau (murs, pathfinding `AStarGrid2D`, vagues, dunes, tempête, affichage).
 - `scripts/map_screen.gd`, `scripts/reward_screen.gd`, `scripts/end_screen.gd` : les autres écrans.
-- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers).
+- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques).
 - `scripts/grid.gd` : taille de la grille, conversions case ↔ pixels.
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
 - `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).

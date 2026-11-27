@@ -16,7 +16,7 @@ Run="*res://scripts/run_state.gd"
 [display]
 
 window/size/viewport_width=960
-window/size/viewport_height=688
+window/size/viewport_height=736
 
 [rendering]
 
