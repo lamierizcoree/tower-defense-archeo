@@ -64,6 +64,7 @@ Pendant un niveau, la barre du bas montre tes reliques. Clique sur une relique, 
 | Commune | Pointe de silex, Plume de vautour, Lentille fêlée | +15 % dégâts, cadence ou portée |
 | Peu commune | Amulette de bronze, Rouage ancien, Longue-vue de cuivre, Ambre fossile | +25 % dégâts, cadence ou portée, ou +30 % effets spéciaux |
 | Rare | Scarabée d'or, Sablier de quartz, Œil de faucon, Cristal des glaces | +40 % sur une stat et +15 % sur une autre |
+| Rare | Sceau de granit | Les murs à portée de la tour ne peuvent plus être creusés par les fouisseurs (losange bleu sur le mur), +15 % portée |
 | Légendaire | Lance du Pharaon | Dégâts x4, mais la tour tire en ligne droite dans une direction (E pour tourner), sur autant de cases que sa portée de base |
 | Légendaire | Couronne du Scarabée-Roi | Dégâts x3 et cadence x1,5, mais portée de 1,5 case |
 | Légendaire | Cœur du Colosse gelé | Cadence x3, mais ne vise que les ennemis ralentis |

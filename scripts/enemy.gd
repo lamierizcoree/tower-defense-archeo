@@ -51,6 +51,8 @@ func is_boss() -> bool:
 ## On part de la case visée pour que l'ennemi ne fasse jamais demi-tour au milieu d'une case.
 func repath() -> void:
 	var new_path: Array[Vector2i] = astar.get_id_path(next_cell, goal)
+	if new_path.is_empty() and next_cell != goal:
+		return  # aucun chemin (cas très rare) : on garde l'ancien
 	if new_path.size() > 0:
 		new_path.remove_at(0)  # le premier élément est next_cell elle-même
 	path = new_path

@@ -34,6 +34,7 @@ var goal := Vector2i.ZERO
 var astar := AStarGrid2D.new()       # chemin des ennemis normaux
 var dig_astar := AStarGrid2D.new()   # chemin des fouisseurs, qui passent sous les murs
 var walls := {}                      # Vector2i -> true
+var sealed := {}                     # murs que les fouisseurs ne peuvent pas creuser (Sceau de granit)
 var towers := {}                     # Vector2i -> Tower
 var enemies: Array[Enemy] = []
 var path_previews: Array = []        # un chemin par entrée
@@ -122,6 +123,7 @@ func _start_wave() -> void:
 	if ended or wave_running or wave_index >= waves.size() - 1:
 		return
 	wave_index += 1
+	call_deferred("_update_seals")  # la tempête change la portée, donc la zone scellée
 	wave_running = true
 	spawn_queue.assign(waves[wave_index]["enemies"])
 	spawn_timer = 0.0
@@ -139,6 +141,7 @@ func _start_wave() -> void:
 func _end_wave() -> void:
 	wave_running = false
 	storm = false
+	_update_seals()
 	if wave_index >= waves.size() - 1:
 		ended = true
 		_say("Niveau réussi !", 99.0)
@@ -349,10 +352,13 @@ func _remove_at(cell: Vector2i) -> void:
 		gold += tower_cost(t.type_id) / 2  # on récupère la moitié du prix ; les reliques reviennent dans l'inventaire
 		t.queue_free()
 		towers.erase(cell)
+		_update_seals()
 	elif walls.has(cell):
 		walls.erase(cell)
 		astar.set_point_solid(cell, false)
 		dig_astar.set_point_weight_scale(cell, 1.0)
+		dig_astar.set_point_solid(cell, false)
+		sealed.erase(cell)
 		gold += wall_cost()
 		_on_grid_changed()
 
@@ -373,6 +379,7 @@ func _click_relic(index: int) -> void:
 	var owner := relic_owner(index)
 	if owner:
 		owner.relics.erase(index)  # on la retire de sa tour
+		_update_seals()
 		_say("%s retirée" % Relics.get_relic(Run.relics[index])["name"])
 		return
 	selected_relic = -1 if selected_relic == index else index
@@ -395,6 +402,7 @@ func _try_socket(cell: Vector2i, index: int) -> void:
 			_say("Une seule légendaire par tour")
 			return
 	t.relics.append(index)
+	_update_seals()
 	selected_relic = -1
 	if t.is_line():
 		t.line_dir = _best_line_dir(t)
@@ -447,8 +455,34 @@ func _cell_has_enemy(cell: Vector2i) -> bool:
 ## Appelé après chaque changement de la grille : tout le monde recalcule son chemin.
 func _on_grid_changed() -> void:
 	_refresh_paths()
+	_update_seals()
 	for e in enemies:
 		e.repath()
+
+
+## Sceau de granit : les murs à portée d'une tour qui porte la relique deviennent
+## impossibles à creuser. Les fouisseurs doivent alors faire le tour comme les autres.
+func _update_seals() -> void:
+	var new_sealed := {}
+	for t in towers.values():
+		if not is_instance_valid(t) or t.is_queued_for_deletion() or not t.legendary("seal", false):
+			continue
+		for w in walls:
+			if Grid.cell_to_world(w).distance_to(t.global_position) <= t.range_px() + 1.0:
+				new_sealed[w] = true
+	# On ne scelle pas un mur sous lequel un fouisseur est en train de passer.
+	for e in enemies:
+		if e.digs():
+			new_sealed.erase(e.next_cell)
+			new_sealed.erase(Grid.world_to_cell(e.position))
+	if new_sealed == sealed:
+		return
+	sealed = new_sealed
+	for w in walls:
+		dig_astar.set_point_solid(w, sealed.has(w))
+	for e in enemies:
+		if e.digs():
+			e.repath()
 
 
 func _refresh_paths() -> void:
@@ -531,6 +565,13 @@ func _draw() -> void:
 		var r := Grid.cell_rect(cell).grow(-2)
 		draw_rect(r, Color("6b5a45"))
 		draw_rect(r, Color("43382b"), false, 2.0)
+		if sealed.has(cell):
+			# Rune du sceau : un losange bleuté
+			var c := r.get_center()
+			var q := Grid.CELL * 0.22
+			var pts := PackedVector2Array([c + Vector2(0, -q), c + Vector2(q, 0), c + Vector2(0, q), c + Vector2(-q, 0), c + Vector2(0, -q)])
+			draw_polyline(pts, Color("9cc4ff"), 2.0)
+			draw_rect(r, Color(0.6, 0.75, 1.0, 0.5), false, 1.5)
 
 	# Tempête : voile de sable
 	if storm:
@@ -777,6 +818,8 @@ func _tower_panel(id: String, t: Tower) -> Array:
 ## Effet court d'une relique pour la fiche d'une tour.
 func _short_relic(id: String) -> String:
 	var r := Relics.get_relic(id)
+	if r.get("seal", false):
+		return "murs à portée impossibles à creuser, +15 % portée"
 	if not Relics.is_legendary(id):
 		return Relics.describe(id)
 	var parts := []

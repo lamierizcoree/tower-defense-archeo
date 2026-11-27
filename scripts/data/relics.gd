@@ -12,6 +12,8 @@ extends RefCounted
 ##   line : la tour tire en ligne droite dans une direction, sur autant de cases que sa portée de base
 ##   fixed_range : portée imposée, en pixels
 ##   only_slowed : la tour ne vise que les ennemis ralentis
+## Effets spéciaux :
+##   seal : les murs à portée de la tour ne peuvent plus être creusés par les fouisseurs
 
 const MAX_HELD := 8
 
@@ -41,6 +43,8 @@ const DATA := {
 	"sablier_quartz": {"name": "Sablier de quartz", "rarity": "rare", "rate": 0.4, "damage": 0.15},
 	"oeil_faucon": {"name": "Œil de faucon", "rarity": "rare", "range": 0.4, "rate": 0.15},
 	"cristal": {"name": "Cristal des glaces", "rarity": "rare", "effect": 0.6, "range": 0.15},
+	"sceau": {"name": "Sceau de granit", "rarity": "rare", "seal": true, "range": 0.15,
+		"desc": "Les murs à portée de la tour ne peuvent plus être creusés : les fouisseurs doivent faire le tour. +15 % de portée."},
 	# --- Légendaires : gros bonus, mais il faut adapter son labyrinthe ---
 	"lance": {"name": "Lance du Pharaon", "rarity": "legendaire", "damage_x": 4.0, "line": true,
 		"desc": "Dégâts x4. La tour ne vise plus autour d'elle : elle tire en ligne droite dans une direction (touche E pour tourner), sur autant de cases que sa portée de base, et touche tout ce qui est sur la ligne."},
