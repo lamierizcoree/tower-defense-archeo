@@ -51,7 +51,17 @@ Le jeu démarre au camp de base :
 | 12 | Cristal des glaces |
 | 15 | Cœur du Colosse gelé |
 
-- **Points d'amélioration** : le score de chaque expédition s'ajoute au score cumulé, et chaque tranche de 1 000 points donne 1 point. On peut utiliser au plus 50 points, et les redistribuer librement entre deux expéditions.
+- **Points d'amélioration** : le score de chaque expédition s'ajoute au score cumulé, qui donne des points. Chaque point coûte plus cher que le précédent : les 4 premiers coûtent 1 000 de score (environ une expédition réussie), puis chaque point coûte 250 de plus que le précédent. On peut utiliser au plus 50 points, et les redistribuer librement entre deux expéditions.
+
+| Points | Score cumulé nécessaire | Environ (expéditions réussies) |
+|---|---|---|
+| 4 | 4 000 | 1 |
+| 10 | 15 250 | 3 à 4 |
+| 20 | 54 000 | 12 |
+| 30 | 117 750 | 27 |
+| 50 | 320 250 | 70 |
+
+Pour régler ce rythme : `FIRST_POINT_COST`, `CHEAP_POINTS` et `COST_STEP` dans `scripts/data/upgrades.gd`.
 
 | Catégorie | Effet par point (10 points au maximum) |
 |---|---|

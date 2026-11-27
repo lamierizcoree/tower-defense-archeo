@@ -29,6 +29,7 @@ func _draw() -> void:
 		"",
 		"Rang d'archéologue : %d" % Profile.rank,
 		"Points d'amélioration gagnés : +%d   (total : %d)" % [Run.points_gained, Profile.points_earned()],
+		"Score cumulé : %d   ·   prochain point à %d" % [Profile.total_score, Profile.next_point_score()] if Profile.next_point_score() > 0 else "Tous les points sont gagnés",
 	]
 	for i in lines.size():
 		draw_string(font, Vector2(0, 280 + i * 34), lines[i], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 20, Color.WHITE)

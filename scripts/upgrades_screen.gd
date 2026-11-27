@@ -48,10 +48,12 @@ func _draw() -> void:
 	var used := Profile.points_used()
 	var avail := Profile.points_available()
 	draw_string(font, Vector2(0, 100), "Points utilisés : %d sur %d disponibles" % [used, avail], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 20, Color.WHITE)
-	var info := "Score cumulé : %d  ·  1 point tous les %d points de score  ·  plafond : %d points  ·  points gagnés : %d" % [
-		Profile.total_score, Upgrades.SCORE_PER_POINT, Upgrades.CAP, Profile.points_earned()]
+	var next := Profile.next_point_score()
+	var next_text := "plafond atteint" if next < 0 else "prochain point à %d" % next
+	var info := "Score cumulé : %d  ·  %s  ·  points gagnés : %d (plafond %d)" % [
+		Profile.total_score, next_text, Profile.points_earned(), Upgrades.CAP]
 	draw_string(font, Vector2(0, 130), info, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.6))
-	draw_string(font, Vector2(0, 160), "Tu peux redistribuer tes points librement, à tout moment, entre deux expéditions.", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.6))
+	draw_string(font, Vector2(0, 160), "Chaque point coûte plus de score que le précédent. Tu peux redistribuer tes points librement entre deux expéditions.", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.6))
 
 	for i in Upgrades.ORDER.size():
 		var id: String = Upgrades.ORDER[i]

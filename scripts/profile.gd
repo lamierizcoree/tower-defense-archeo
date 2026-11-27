@@ -113,7 +113,15 @@ func run_finished(score: int, victory: bool) -> int:
 # --- Améliorations -----------------------------------------------------------
 
 func points_earned() -> int:
-	return total_score / Upgrades.SCORE_PER_POINT
+	return Upgrades.points_for_score(total_score)
+
+
+## Score cumulé qu'il faut atteindre pour le prochain point (-1 si le plafond est atteint).
+func next_point_score() -> int:
+	var n := points_earned()
+	if n >= Upgrades.CAP:
+		return -1
+	return Upgrades.score_for_points(n + 1)
 
 
 ## Points qu'on peut répartir : ceux gagnés, dans la limite du plafond.
