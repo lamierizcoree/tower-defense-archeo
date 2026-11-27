@@ -22,6 +22,11 @@ Prototype du tower defense roguelite en labyrinthe. Une expédition traverse 2 b
 
 Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur la barre du bas pour choisir quoi construire.
 
+Pour voir les détails, passe la souris :
+- sur une tour (posée ou dans la barre du bas) : dégâts, tirs par seconde, portée, effet spécial, prix ;
+- sur la ligne « Prochaine vague » (ⓘ) : nombre d'ennemis de chaque type, points de vie, vitesse, vies perdues s'ils s'échappent et capacités spéciales ;
+- sur un ennemi : ses points de vie restants et ses effets en cours.
+
 ## L'expédition
 
 1. **La carte** : on choisit son prochain niveau parmi ceux entourés. ⚔ = combat (2 vagues), ! = élite (3 vagues plus dures, une récompense rare garantie), ☠ = boss (3 vagues, le boss arrive à la dernière).

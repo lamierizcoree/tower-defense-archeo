@@ -17,6 +17,7 @@ const DUNES_PER_WAVE := 4
 const DIG_WEIGHT := 6.0     # un fouisseur « paie » 6 cases pour passer sous un mur
 const STORM_RANGE := 0.75
 const MACON_RANGE := 12.0
+const WAVE_INFO_RECT := Rect2(6, 34, 614, 24)   # zone de la ligne « Prochaine vague » à survoler
 
 var node: Dictionary
 var biome: Dictionary
@@ -48,6 +49,7 @@ var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
 var ended := false
 var message := ""
 var message_time := 0.0
+var overlay: Node2D   # calque dessiné par-dessus les tours et les ennemis (fiches d'infos)
 
 
 func _ready() -> void:
@@ -61,7 +63,12 @@ func _ready() -> void:
 		Run.lives += 2
 	_shift_dunes()
 	_refresh_paths()
-	_say("Construis ton labyrinthe, puis appuie sur Espace")
+	_say("Construis ton labyrinthe, puis Espace")
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	overlay = Node2D.new()
+	layer.add_child(overlay)
+	overlay.draw.connect(_draw_overlay)
 
 
 func _exit_tree() -> void:
@@ -105,6 +112,7 @@ func _process(delta: float) -> void:
 		elif enemies.is_empty():
 			_end_wave()
 	queue_redraw()
+	overlay.queue_redraw()
 
 
 func _start_wave() -> void:
@@ -475,6 +483,11 @@ func _draw_hud(font: Font) -> void:
 			line2 += "  ·  tempête"
 	elif wave_running:
 		line2 = "Restants : %d" % (spawn_queue.size() + enemies.size())
+	if line2 != "":
+		line2 += "   ⓘ"
+		var hot := WAVE_INFO_RECT.has_point(get_global_mouse_position())
+		if hot:
+			draw_rect(WAVE_INFO_RECT, Color(1, 1, 1, 0.08))
 	draw_string(font, Vector2(12, 50), line2, HORIZONTAL_ALIGNMENT_LEFT, 600, 14, Color(1, 1, 1, 0.75))
 	if message_time > 0.0:
 		draw_string(font, Vector2(630, 50), message, HORIZONTAL_ALIGNMENT_LEFT, 320, 14, Color("ffe066"))
@@ -526,3 +539,160 @@ func _build_bar_slot(pos: Vector2) -> int:
 		if _build_bar_rect(i).has_point(pos):
 			return i
 	return -1
+
+
+# --- Fiches d'informations (au survol) ---------------------------------------
+
+func _draw_overlay() -> void:
+	if ended:
+		return
+	var mouse := get_global_mouse_position()
+	var font := ThemeDB.fallback_font
+
+	# Détail de la vague à venir (ou en cours)
+	if WAVE_INFO_RECT.has_point(mouse):
+		var index := wave_index if wave_running else wave_index + 1
+		if index >= 0 and index < waves.size():
+			_draw_panel(font, Vector2(12, 62), _wave_panel(index))
+		return
+
+	# Tour dans la barre de construction
+	var slot := _build_bar_slot(mouse)
+	if slot > 0:
+		var id: String = TowerTypes.ORDER[slot - 1]
+		var r := _build_bar_rect(slot)
+		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _tower_panel(id, null), true)
+		return
+
+	var cell := Grid.world_to_cell(mouse)
+	# Ennemi sous la souris
+	for e in enemies:
+		if is_instance_valid(e) and e.global_position.distance_to(mouse) <= e.data["radius"] + 4:
+			_draw_panel(font, mouse + Vector2(18, 18), _enemy_panel(e))
+			return
+	# Tour posée
+	if Grid.in_bounds(cell) and towers.has(cell):
+		_draw_panel(font, mouse + Vector2(18, 18), _tower_panel(towers[cell].type_id, towers[cell]))
+
+
+## Une ligne de fiche : [texte, taille, couleur]
+func _line(text: String, size := 13, color := Color(1, 1, 1, 0.85)) -> Array:
+	return [text, size, color]
+
+
+func _tower_panel(id: String, t: Tower) -> Array:
+	var d := TowerTypes.get_type(id)
+	var lines := [_line(d["name"], 17, Color.WHITE), _line(d["desc"], 13, Color(1, 1, 1, 0.6))]
+	var cell: Vector2i = t.cell if t else Vector2i(-10, -10)
+	var rng := tower_range(id, cell)
+	var range_note := "  (tempête -25 %)" if storm else ""
+	if d["attack"] != "support":
+		var dmg: float = t._damage() if t else d["damage"]
+		var rate: float = (t._fire_rate() if t else float(biome["tower_cadence"])) / float(d["delay"])
+		if d["attack"] == "poison":
+			lines.append(_line("Poison : %d dégâts/s pendant %d s (%d au total)" % [d["poison_dps"], d["poison_time"], d["poison_dps"] * d["poison_time"]]))
+		else:
+			var dmg_note := "  (Cul-de-sac x2)" if t and dmg > float(d["damage"]) else ""
+			lines.append(_line("Dégâts : %s%s" % [_num(dmg), dmg_note]))
+		lines.append(_line("Tirs par seconde : %s" % _num(rate)))
+	lines.append(_line("Portée : %d%s" % [rng, range_note]))
+	match d["attack"]:
+		"single":
+			lines.append(_line("Vise l'ennemi le plus proche de la sortie"))
+			if Run.has_joker("echo"):
+				lines.append(_line("Écho : rebondit sur un 2e ennemi (60 %)", 13, Color("ffd54a")))
+		"splash":
+			var radius: float = d["splash_radius"] * (1.5 if Run.has_joker("artilleur") else 1.0)
+			lines.append(_line("Explosion : rayon %d" % radius))
+			lines.append(_line("Ne tire pas à moins de %d" % d["min_range"]))
+		"aura":
+			var slow: float = 0.35 if Run.has_joker("givre_eternel") else d["slow"]
+			var slow_time: float = d["slow_time"] * (2.0 if Run.has_joker("givre_eternel") else 1.0)
+			lines.append(_line("Touche tous les ennemis à portée"))
+			lines.append(_line("Ralentit de %d %% pendant %s s" % [roundi((1.0 - slow) * 100), _num(slow_time)]))
+		"poison":
+			lines.append(_line("Vise d'abord les ennemis pas encore empoisonnés"))
+		"support":
+			var buff: float = d["buff"]
+			lines.append(_line("N'attaque pas"))
+			lines.append(_line("Tours à portée : +%d %% de cadence" % roundi(buff * 100)))
+			if Run.has_joker("ancetres"):
+				lines.append(_line("Totems ancestraux : les bonus se cumulent", 13, Color("ffd54a")))
+	if biome["tower_cadence"] < 1.0:
+		lines.append(_line("Froid : cadence -%d %%" % roundi((1.0 - biome["tower_cadence"]) * 100), 13, Color("9fd3ea")))
+	if t:
+		lines.append(_line("Revente (clic droit) : %d or" % (tower_cost(id) / 2), 13, Color(1, 1, 1, 0.6)))
+	else:
+		lines.append(_line("Prix : %d or  ·  se pose sur un mur" % tower_cost(id), 13, Color("ffe066")))
+	return lines
+
+
+func _wave_panel(index: int) -> Array:
+	var wave: Dictionary = waves[index]
+	var hp_mult: float = wave["hp_mult"]
+	var speed_mult: float = biome["enemy_speed"]
+	var counts := {}
+	var order := []
+	for t in wave["enemies"]:
+		if not counts.has(t):
+			order.append(t)
+		counts[t] = counts.get(t, 0) + 1
+	var title := "Vague %d/%d : %d ennemis" % [index + 1, waves.size(), wave["enemies"].size()]
+	var lines := [_line(title, 17, Color.WHITE)]
+	if _is_storm(index):
+		lines.append(_line("Tempête de sable : portée des tours -25 %", 13, Color("e0b070")))
+	if index == 0 and Run.has_joker("sablier"):
+		lines.append(_line("Sablier ancien : ennemis 30 % plus lents", 13, Color("ffd54a")))
+	for t in order:
+		var d := EnemyTypes.get_type(t)
+		var n: int = counts[t]
+		var hp := roundi(d["hp"] * hp_mult)
+		var speed: float = d["speed"] * speed_mult / Grid.CELL
+		lines.append(_line("%d × %s" % [n, d["name"] if n == 1 else d["plural"]], 15, d["color"].lightened(0.35)))
+		lines.append(_line("    PV %d  ·  vitesse %s cases/s  ·  -%d vie%s" % [hp, _num(speed), d["damage"], "s" if d["damage"] > 1 else ""]))
+		lines.append(_line("    " + d["ability"], 13, Color(1, 1, 1, 0.6)))
+	if not ice.is_empty():
+		lines.append(_line("Sur la glace, tous les ennemis vont 2 fois plus vite", 13, Color("9fd3ea")))
+	return lines
+
+
+func _enemy_panel(e: Enemy) -> Array:
+	var d := e.data
+	var lines := [_line(d["name"].capitalize() if not e.is_boss() else d["name"], 16, Color.WHITE)]
+	lines.append(_line("PV %d / %d" % [ceili(e.hp), roundi(e.max_hp)]))
+	lines.append(_line("Vitesse %s cases/s  ·  -%d vie%s" % [_num(e.speed / Grid.CELL), d["damage"], "s" if d["damage"] > 1 else ""]))
+	lines.append(_line(d["ability"], 13, Color(1, 1, 1, 0.6)))
+	if e.slow_time > 0.0:
+		lines.append(_line("Ralenti (%s s)" % _num(e.slow_time), 13, Color("7fd6e8")))
+	if e.is_poisoned():
+		lines.append(_line("Empoisonné (%s s)" % _num(e.poison_time), 13, Color("8fd14f")))
+	return lines
+
+
+## Dessine une fiche. Si above est vrai, la fiche est posée au-dessus du point donné.
+func _draw_panel(font: Font, at: Vector2, lines: Array, above := false) -> void:
+	var pad := 10.0
+	var w := 0.0
+	var h := pad
+	for l in lines:
+		w = maxf(w, font.get_string_size(l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1]).x)
+		h += l[1] + 6
+	w += pad * 2
+	h += pad - 6
+	var pos := at - Vector2(0, h) if above else at
+	pos.x = clampf(pos.x, 4, Grid.SCREEN.x - w - 4)
+	pos.y = clampf(pos.y, 4, Grid.SCREEN.y - h - 4)
+	overlay.draw_rect(Rect2(pos, Vector2(w, h)), Color(0.08, 0.07, 0.09, 0.93), true)
+	overlay.draw_rect(Rect2(pos, Vector2(w, h)), Color(1, 1, 1, 0.25), false, 1.0)
+	var y := pos.y + pad
+	for l in lines:
+		y += l[1]
+		overlay.draw_string(font, Vector2(pos.x + pad, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], l[2])
+		y += 6
+
+
+## Nombre court : 1 décimale si besoin.
+func _num(x: float) -> String:
+	if absf(x - roundf(x)) < 0.05:
+		return str(roundi(x))
+	return "%.1f" % x
