@@ -48,6 +48,8 @@ var storm := false
 
 var gold := 0
 var gold_rest := 0.0   # morceaux d'or pas encore entiers (voir earn)
+var wall_paid := {}    # Vector2i -> or payé pour ce mur (rendu s'il est retiré)
+var free_walls_used := 0  # murs gratuits déjà posés (joker Architecte fou)
 var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
 var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
 var ended := false
@@ -315,9 +317,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func wall_cost() -> int:
-	if Run.has_joker("architecte"):
+	if free_walls_left() > 0:
 		return 0
 	return 1 if Run.has_joker("briques") else WALL_COST
+
+
+## Murs gratuits restants dans ce niveau (joker Architecte fou).
+func free_walls_left() -> int:
+	if not Run.has_joker("architecte"):
+		return 0
+	return maxi(0, Jokers.ARCHITECTE_FREE_WALLS - free_walls_used)
 
 
 func tower_cost(id: String) -> int:
@@ -373,7 +382,11 @@ func _try_place_wall(cell: Vector2i) -> void:
 		return
 
 	walls[cell] = true  # les fouisseurs l'ignorent : pour eux, un mur compte comme du sable
-	gold -= wall_cost()
+	var cost := wall_cost()
+	if cost == 0:
+		free_walls_used += 1
+	wall_paid[cell] = cost
+	gold -= cost
 	_on_grid_changed()
 
 
@@ -407,7 +420,11 @@ func _remove_at(cell: Vector2i) -> void:
 		astar.set_point_solid(cell, false)
 		dig_astar.set_point_solid(cell, false)
 		sealed.erase(cell)
-		gold += wall_cost()
+		var paid: int = wall_paid.get(cell, wall_cost())
+		if paid == 0 and free_walls_used > 0:
+			free_walls_used -= 1  # le mur gratuit peut être reposé ailleurs
+		gold += paid
+		wall_paid.erase(cell)
 		_on_grid_changed()
 
 
@@ -703,7 +720,10 @@ func _draw_build_bar(font: Font) -> void:
 		draw_rect(Rect2(r.position + Vector2(6, 12), Vector2(16, 16)), color)
 		var text_color := Color.WHITE if gold >= cost else Color(1, 1, 1, 0.4)
 		draw_string(font, r.position + Vector2(28, 18), label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 34, 14, text_color)
-		draw_string(font, r.position + Vector2(28, 34), "%d or" % cost, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
+		var price := "%d or" % cost
+		if id == "" and free_walls_left() > 0:
+			price = "gratuit (%d)" % free_walls_left()
+		draw_string(font, r.position + Vector2(28, 34), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
 
 
 func _build_bar_rect(i: int) -> Rect2:

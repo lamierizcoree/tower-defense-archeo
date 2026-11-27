@@ -104,25 +104,41 @@ static func describe_short(id: String) -> String:
 	return DATA[id].get("short", describe(id))
 
 
+## Chances des raretés de relique quand la stat Chance est au maximum.
+## Entre 0 et le maximum, les chances glissent en ligne droite des valeurs de base vers celles-ci.
+## (Celles des jokers sont dans jokers.gd.)
+const MAX_LUCK_WEIGHTS := {"commun": 22.0, "non_commun": 50.0, "rare": 20.0, "legendaire": 8.0}
+
+
+## Chances de chaque rareté avec la stat Chance (luck va de 0 à 1).
+static func lucky_weights(base: Dictionary, luck: float, target: Dictionary = MAX_LUCK_WEIGHTS) -> Dictionary:
+	var w := {}
+	for rar in RARITIES:
+		w[rar] = lerpf(float(base[rar]), float(target[rar]), clampf(luck, 0.0, 1.0))
+	return w
+
+
+## Tire une rareté parmi celles autorisées, selon les chances données.
+static func roll_rarity(rng: RandomNumberGenerator, weights: Dictionary, allowed: Array) -> String:
+	var total := 0.0
+	for rar in allowed:
+		total += weights[rar]
+	var roll := rng.randf() * total
+	for rar in allowed:
+		roll -= weights[rar]
+		if roll < 0.0:
+			return rar
+	return allowed[allowed.size() - 1]
+
+
 ## Tire une relique débloquée au hasard. min_rarity force une rareté minimale (élite, boss).
-## luck = chance de monter d'une rareté (amélioration Chance).
+## luck = niveau de la stat Chance, de 0 à 1 (voir lucky_weights).
 ## max_rarity plafonne la rareté (boss qui s'est échappé : rare au maximum).
 ## Si aucune relique de la rareté tirée n'est débloquée, on descend d'une rareté.
 static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0, unlocked: Callable = Callable(), max_rarity := "legendaire") -> String:
 	var top := RARITIES.find(max_rarity)
 	var allowed := RARITIES.slice(RARITIES.find(min_rarity), top + 1)
-	var total := 0
-	for rar in allowed:
-		total += WEIGHTS[rar]
-	var roll := rng.randi_range(1, total)
-	var index := RARITIES.find(allowed[0])
-	for rar in allowed:
-		roll -= WEIGHTS[rar]
-		if roll <= 0:
-			index = RARITIES.find(rar)
-			break
-	if index < top and rng.randf() < luck:
-		index += 1
+	var index := RARITIES.find(roll_rarity(rng, lucky_weights(WEIGHTS, luck), allowed))
 	while index >= 0:
 		var pool := []
 		for id in DATA:

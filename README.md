@@ -69,7 +69,7 @@ Pour régler ce rythme : `FIRST_POINT_COST`, `CHEAP_POINTS` et `COST_STEP` dans 
 | Cadence | +1 % de vitesse de tir |
 | Économie | +5 or au départ de chaque vague |
 | Rempart | +1 vie au départ de l'expédition |
-| Chance | +1 % de joker rare et de relique plus rare |
+| Chance | Jokers et reliques plus rares. Chaque point rapproche les chances de leur maximum, atteint à 10 points : jokers 25 % commun, 50 % non commun, 20 % rare, 5 % légendaire ; reliques 22 / 50 / 20 / 8 % |
 | Préparation | 5 pts : une relique commune au départ ; 10 pts : un emplacement de joker en plus |
 | Forge | Arrivera avec la fusion des reliques |
 
@@ -113,7 +113,7 @@ Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ral
 
 ### Les jokers
 
-Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chances sont : commun 55 %, non commun 30 %, rare 12 %, légendaire 3 %. Après une élite, une carte est au moins rare ; après un boss, deux cartes. Les réglages sont en haut de `scripts/data/jokers.gd`.
+Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chances sont : commun 55 %, non commun 30 %, rare 12 %, légendaire 3 %. Après une élite, une carte est au moins rare ; après un boss, deux cartes. La stat Chance du camp de base rend les raretés plus fréquentes (voir plus haut). Les réglages sont en haut de `scripts/data/jokers.gd`.
 
 | Rareté | Joker | Effet |
 |---|---|---|
@@ -136,7 +136,7 @@ Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chance
 | Rare | Écrin double | Chaque tour peut porter 2 reliques (toujours une seule légendaire) |
 | Légendaire | Esprit de meute | +10 % de cadence par autre tour du même type posée (+50 % au maximum) |
 | Légendaire | Trésor maudit | Or gagné pendant les vagues x2, mais ennemis +25 % de PV |
-| Légendaire | Architecte fou | Murs gratuits, mais tours +50 % plus chères |
+| Légendaire | Architecte fou | Les 20 premiers murs de chaque niveau sont gratuits, mais tours +50 % plus chères |
 
 ## Les tours
 

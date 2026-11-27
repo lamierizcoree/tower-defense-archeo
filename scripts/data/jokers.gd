@@ -10,6 +10,8 @@ const RARITIES := ["commun", "non_commun", "rare", "legendaire"]
 const RARITY_NAMES := {"commun": "Commun", "non_commun": "Peu commun", "rare": "Rare", "legendaire": "Légendaire"}
 ## Chances de tirer chaque rareté pour une carte joker (sur 100).
 const WEIGHTS := {"commun": 55, "non_commun": 30, "rare": 12, "legendaire": 3}
+## Chances quand la stat Chance est au maximum (10 points).
+const MAX_LUCK_WEIGHTS := {"commun": 25, "non_commun": 50, "rare": 20, "legendaire": 5}
 
 ## Réglages des jokers à effet chiffré (pour équilibrer facilement).
 const BUTIN_GOLD := 0.3          # Butin de fouille : +30 % d'or pendant les vagues
@@ -17,7 +19,8 @@ const MEUTE_PER_TOWER := 0.1     # Esprit de meute : +10 % de cadence par autre 
 const MEUTE_MAX := 0.5           # ... plafonné à +50 %
 const MAUDIT_GOLD := 2.0         # Trésor maudit : or gagné x2
 const MAUDIT_HP := 1.25          # ... mais ennemis +25 % de PV
-const ARCHITECTE_TOWER := 1.5    # Architecte fou : murs gratuits, tours +50 %
+const ARCHITECTE_FREE_WALLS := 20  # Architecte fou : 20 murs gratuits par niveau...
+const ARCHITECTE_TOWER := 1.5    # ... mais tours +50 %
 
 const DATA := {
 	# --- Communs ---
@@ -63,7 +66,7 @@ const DATA := {
 	"maudit": {"name": "Trésor maudit", "rarity": "legendaire",
 		"desc": "Tout l'or gagné pendant les vagues est doublé, mais les ennemis ont 25 % de PV en plus."},
 	"architecte": {"name": "Architecte fou", "rarity": "legendaire",
-		"desc": "Les murs sont gratuits, mais les tours coûtent 50 % plus cher."},
+		"desc": "Les 20 premiers murs de chaque niveau sont gratuits, mais les tours coûtent 50 % plus cher."},
 }
 
 
@@ -82,7 +85,7 @@ static func color_of(id: String) -> Color:
 
 ## Tire 3 jokers différents que le joueur n'a pas encore.
 ## rare_slots = nombre de cartes qui seront au moins rares si possible (élite : 1, boss : 2).
-## luck = chance de monter d'une rareté (amélioration Chance).
+## luck = niveau de la stat Chance, de 0 à 1 (voir Relics.lucky_weights).
 ## Si plus aucun joker de la rareté tirée n'est disponible, on prend la rareté la plus proche.
 static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: int, luck := 0.0) -> Array[String]:
 	var pools := {}
@@ -91,12 +94,11 @@ static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: in
 	for id in DATA:
 		if not id in held:
 			pools[DATA[id]["rarity"]].append(id)
+	var weights := Relics.lucky_weights(WEIGHTS, luck, MAX_LUCK_WEIGHTS)
 	var result: Array[String] = []
 	for i in 3:
 		var allowed: Array = RARITIES.slice(2) if i < rare_slots else RARITIES
-		var index := RARITIES.find(_roll(rng, allowed))
-		if index < RARITIES.size() - 1 and rng.randf() < luck:
-			index += 1
+		var index := RARITIES.find(Relics.roll_rarity(rng, weights, allowed))
 		var pick := ""
 		# on cherche dans la rareté tirée, puis on s'en éloigne petit à petit
 		for d in RARITIES.size():
@@ -110,14 +112,3 @@ static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: in
 		result.append(pick)
 	return result
 
-
-static func _roll(rng: RandomNumberGenerator, allowed: Array) -> String:
-	var total := 0
-	for rar in allowed:
-		total += WEIGHTS[rar]
-	var roll := rng.randi_range(1, total)
-	for rar in allowed:
-		roll -= WEIGHTS[rar]
-		if roll <= 0:
-			return rar
-	return allowed[0]
