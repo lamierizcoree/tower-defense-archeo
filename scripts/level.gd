@@ -411,8 +411,11 @@ func _try_socket(cell: Vector2i, index: int) -> void:
 		return
 	var t: Tower = towers[cell]
 	var id := Run.relics[index]
-	if t.relics.size() >= int(t.data["slots"]):
-		_say("Plus d'emplacement libre (%d)" % t.data["slots"])
+	if t.relics.size() >= t.slot_count():
+		if t.slot_count() == 1:
+			_say("Une seule relique par tour (2 avec le joker Écrin double)")
+		else:
+			_say("Plus d'emplacement libre (%d)" % t.slot_count())
 		return
 	if Relics.is_legendary(id):
 		if t.data["attack"] == "support":
@@ -824,13 +827,13 @@ func _tower_panel(id: String, t: Tower) -> Array:
 		lines.append(_line("Froid : cadence -%d %%" % roundi((1.0 - biome["tower_cadence"]) * 100), 13, Color("9fd3ea")))
 	# Reliques
 	if t:
-		lines.append(_line("Reliques : %d/%d" % [t.relics.size(), d["slots"]], 14, Color.WHITE))
+		lines.append(_line("Reliques : %d/%d" % [t.relics.size(), t.slot_count()], 14, Color.WHITE))
 		for rid in t.relic_ids():
 			var r := Relics.get_relic(rid)
 			lines.append(_line("  • %s : %s" % [r["name"], _short_relic(rid)], 13, Relics.RARITY_COLORS[r["rarity"]]))
 		lines.append(_line("Revente (clic droit) : %d or" % (tower_cost(id) / 2), 13, Color(1, 1, 1, 0.6)))
 	else:
-		lines.append(_line("Emplacements de reliques : %d" % d["slots"]))
+		lines.append(_line("Reliques : %d (une seule légendaire)" % (2 if Run.has_joker("ecrin") else 1)))
 		lines.append(_line("Prix : %d or  ·  se pose sur un mur" % tower_cost(id), 13, Color("ffe066")))
 	return lines
 

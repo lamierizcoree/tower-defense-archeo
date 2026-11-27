@@ -32,6 +32,12 @@ func setup(id: String, lvl: Node, at: Vector2i) -> void:
 
 # --- Reliques ----------------------------------------------------------------
 
+## Nombre de reliques que la tour peut porter : 1, ou 2 avec le joker Écrin double.
+## Dans tous les cas, une seule légendaire par tour.
+func slot_count() -> int:
+	return 2 if Run.has_joker("ecrin") else 1
+
+
 func relic_ids() -> Array[String]:
 	var ids: Array[String] = []
 	for i in relics:

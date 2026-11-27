@@ -97,14 +97,7 @@ Les reliques sont des artefacts déterrés qu'on place dans les emplacements des
 
 Pendant un niveau, la barre du bas montre tes reliques. Clique sur une relique, puis sur une tour, pour l'y poser. Clique sur une relique déjà posée pour la retirer. Une tour vendue rend ses reliques, et toutes les reliques reviennent dans l'inventaire au niveau suivant.
 
-| Tour | Emplacements |
-|---|---|
-| Arbalète | 2 |
-| Baliste | 1 |
-| Mortier | 2 |
-| Givre | 2 |
-| Alambic | 2 |
-| Totem | 3 (pas de légendaire) |
+Chaque tour porte **une seule relique**. Le joker rare **Écrin double** permet d'en porter 2. Dans tous les cas, une tour ne peut avoir qu'une seule légendaire, et le Totem n'en accepte aucune.
 
 | Rareté | Reliques | Effet |
 |---|---|---|
@@ -137,6 +130,7 @@ Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ral
 | Écho (rare) | Les tirs d'Arbalète et de Baliste rebondissent sur un 2e ennemi |
 | Fiole instable (rare) | Un ennemi empoisonné qui meurt explose |
 | Sablier ancien (rare) | Première vague de chaque niveau : ennemis 30 % plus lents |
+| Écrin double (rare) | Chaque tour peut porter 2 reliques (toujours une seule légendaire) |
 
 ## Les tours
 

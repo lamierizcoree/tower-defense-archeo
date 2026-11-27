@@ -38,6 +38,8 @@ const DATA := {
 		"desc": "Un ennemi empoisonné qui meurt explose et blesse ses voisins."},
 	"sablier": {"name": "Sablier ancien", "rare": true,
 		"desc": "Pendant la première vague de chaque niveau, les ennemis sont 30 % plus lents."},
+	"ecrin": {"name": "Écrin double", "rare": true,
+		"desc": "Chaque tour peut porter 2 reliques au lieu d'une (toujours une seule légendaire)."},
 }
 
 
