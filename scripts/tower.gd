@@ -1,13 +1,15 @@
 class_name Tower
 extends Node2D
 ## Une tour posée sur un mur. Son comportement dépend de son type (voir tower_types.gd),
-## du biome (tempête, froid) et des jokers du joueur.
+## du biome (tempête, froid), des jokers du joueur et des reliques posées dedans.
 
 var type_id := "arbalete"
 var data: Dictionary = {}
 var cell: Vector2i
 var level: Node            # le niveau (level.gd)
 var cooldown := 0.0
+var relics: Array[int] = []    # index des reliques de Run.relics posées dans cette tour
+var line_dir := Vector2i.RIGHT # direction de tir avec la Lance du Pharaon
 
 # Effets visuels du dernier tir
 var shot_target := Vector2.ZERO
@@ -28,8 +30,65 @@ func setup(id: String, lvl: Node, at: Vector2i) -> void:
 	position = Grid.cell_to_world(at)
 
 
+# --- Reliques ----------------------------------------------------------------
+
+func relic_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for i in relics:
+		ids.append(Run.relics[i])
+	return ids
+
+
+## Somme d'un bonus en pourcentage sur toutes les reliques de la tour.
+func relic_bonus(stat: String) -> float:
+	var total := 0.0
+	for id in relic_ids():
+		total += float(Relics.get_relic(id).get(stat, 0.0))
+	return total
+
+
+## Valeur d'un bonus de légendaire (multiplicateur ou option), ou default si absent.
+func legendary(key: String, default: Variant = null) -> Variant:
+	for id in relic_ids():
+		var r := Relics.get_relic(id)
+		if r.has(key):
+			return r[key]
+	return default
+
+
+func has_legendary() -> bool:
+	for id in relic_ids():
+		if Relics.is_legendary(id):
+			return true
+	return false
+
+
+func is_line() -> bool:
+	return legendary("line", false)
+
+
+## Longueur de la ligne de tir, en cases : la portée de base de la tour.
+func line_cells() -> int:
+	return maxi(1, roundi(float(data["range"]) / Grid.CELL))
+
+
+## Multiplicateur des effets spéciaux (ralentissement, poison, explosion, totem).
+func effect_mult() -> float:
+	return 1.0 + relic_bonus("effect")
+
+
+# --- Statistiques ------------------------------------------------------------
+
 func range_px() -> float:
-	return level.tower_range(type_id, cell)
+	var fixed: Variant = legendary("fixed_range")
+	if fixed != null:
+		return fixed
+	return level.tower_range(type_id, cell) * (1.0 + relic_bonus("range"))
+
+
+## Bonus de cadence que ce Totem donne à ses voisins.
+func buff_value() -> float:
+	return float(data.get("buff", 0.0)) * effect_mult()
 
 
 func _process(delta: float) -> void:
@@ -43,30 +102,58 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-## Vitesse de tir : froid du biome × bonus des totems voisins.
+## Vitesse de tir : froid du biome × reliques × bonus des totems voisins.
 func _fire_rate() -> float:
 	var rate: float = Run.biome()["tower_cadence"]
+	rate *= (1.0 + relic_bonus("rate")) * float(legendary("rate_x", 1.0))
 	var bonus := 0.0
 	for t in level.towers.values():
 		if t == self or not is_instance_valid(t) or t.data["attack"] != "support":
 			continue
 		if global_position.distance_to(t.global_position) <= t.range_px():
 			if Run.has_joker("ancetres"):
-				bonus += t.data["buff"]
+				bonus += t.buff_value()
 			else:
-				bonus = maxf(bonus, t.data["buff"])
+				bonus = maxf(bonus, t.buff_value())
 	return rate * (1.0 + bonus)
 
 
 func _damage() -> float:
 	var dmg: float = data["damage"]
+	dmg *= (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0))
 	if Run.has_joker("cul_de_sac") and level.blocked_neighbors(cell) >= 3:
 		dmg *= 2.0
 	return dmg
 
 
+## Multiplicateur de dégâts des reliques (utilisé pour le poison).
+func _damage_mult() -> float:
+	return (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0))
+
+
+func _poison_dps() -> float:
+	return float(data["poison_dps"]) * _damage_mult() * effect_mult()
+
+
+func _slow() -> Array:
+	var slow: float = data["slow"]
+	var slow_time: float = float(data["slow_time"]) * effect_mult()
+	if Run.has_joker("givre_eternel"):
+		slow = 0.35
+		slow_time *= 2.0
+	return [slow, slow_time]
+
+
+func _splash_radius() -> float:
+	return float(data["splash_radius"]) * (1.5 if Run.has_joker("artilleur") else 1.0) * effect_mult()
+
+
+# --- Attaque -----------------------------------------------------------------
+
 ## Tire si possible. Renvoie true si un tir a eu lieu.
 func _attack() -> bool:
+	if is_line():
+		return _attack_line()
 	match data["attack"]:
 		"single":
 			var target := _find_target()
@@ -92,14 +179,10 @@ func _attack() -> bool:
 					e.take_damage(_damage())
 		"aura":
 			var hit := false
-			var slow: float = data["slow"]
-			var slow_time: float = data["slow_time"]
-			if Run.has_joker("givre_eternel"):
-				slow = 0.35
-				slow_time *= 2.0
+			var s := _slow()
 			for e in level.enemies.duplicate():
 				if _in_range(e):
-					e.apply_slow(slow, slow_time)
+					e.apply_slow(s[0], s[1])
 					e.take_damage(_damage())
 					hit = true
 			if not hit:
@@ -110,16 +193,50 @@ func _attack() -> bool:
 			if target == null:
 				return false
 			_show_shot(target)
-			target.apply_poison(data["poison_dps"], data["poison_time"])
+			target.apply_poison(_poison_dps(), data["poison_time"])
 	return true
 
 
-func _splash_radius() -> float:
-	return data["splash_radius"] * (1.5 if Run.has_joker("artilleur") else 1.0)
+## Lance du Pharaon : touche tous les ennemis sur la ligne de tir.
+func _attack_line() -> bool:
+	var hits := []
+	for e in level.enemies:
+		if _in_line(e) and _target_allowed(e):
+			hits.append(e)
+	if hits.is_empty():
+		return false
+	shot_time = SHOT_DURATION * 1.5
+	for e in hits:
+		match data["attack"]:
+			"aura":
+				var s := _slow()
+				e.apply_slow(s[0], s[1])
+				e.take_damage(_damage())
+			"poison":
+				e.apply_poison(_poison_dps(), data["poison_time"])
+			_:
+				e.take_damage(_damage())
+	return true
+
+
+## Vrai si l'ennemi est dans la bande de cases devant la tour.
+func _in_line(e: Enemy) -> bool:
+	if not is_instance_valid(e) or e.dead:
+		return false
+	var rel := e.global_position - global_position
+	var dir := Vector2(line_dir)
+	var along := rel.dot(dir)
+	var side := absf(rel.dot(dir.orthogonal()))
+	return along >= Grid.CELL * 0.3 and along <= (line_cells() + 0.5) * Grid.CELL and side <= Grid.CELL * 0.5
+
+
+## Cœur du Colosse gelé : seuls les ennemis ralentis peuvent être visés.
+func _target_allowed(e: Enemy) -> bool:
+	return not legendary("only_slowed", false) or e.slow_time > 0.0
 
 
 func _in_range(e: Enemy, min_range := 0.0) -> bool:
-	if not is_instance_valid(e) or e.dead:
+	if not is_instance_valid(e) or e.dead or not _target_allowed(e):
 		return false
 	var d := global_position.distance_to(e.global_position)
 	return d <= range_px() and d >= min_range
@@ -167,6 +284,12 @@ func _draw() -> void:
 	var color: Color = data["color"]
 	var s := Grid.CELL * 0.7
 	var dark := color.darkened(0.5)
+	if is_line():
+		# Bande de tir de la Lance du Pharaon
+		var band := _line_rect()
+		var flash := shot_time > 0.0
+		draw_rect(band, Color(1.0, 0.75, 0.2, 0.45 if flash else 0.14))
+		draw_rect(band, Color(1.0, 0.75, 0.2, 0.6), false, 1.5)
 	match data["attack"]:
 		"single":
 			if type_id == "baliste":
@@ -201,7 +324,14 @@ func _draw() -> void:
 			draw_polyline(pts, dark, 2.0)
 			draw_arc(Vector2.ZERO, range_px(), 0.0, TAU, 48, Color(color, 0.25), 1.5)
 
-	if shot_time > 0.0:
+	# Reliques posées : une pierre par relique, de la couleur de sa rareté
+	var ids := relic_ids()
+	for k in ids.size():
+		var p := Vector2(-s / 2 + 5 + k * 9, s / 2 - 4)
+		draw_circle(p, 4.5, Color(0, 0, 0, 0.6))
+		draw_circle(p, 3.5, Relics.RARITY_COLORS[Relics.get_relic(ids[k])["rarity"]])
+
+	if shot_time > 0.0 and not is_line():
 		match data["attack"]:
 			"single":
 				var w := 5.0 if type_id == "baliste" else 3.0
@@ -214,3 +344,17 @@ func _draw() -> void:
 				draw_circle(Vector2.ZERO, range_px(), Color(0.6, 0.9, 1.0, 0.25))
 			"poison":
 				draw_line(Vector2.ZERO, shot_target, Color("8fd14f"), 3.0)
+
+
+## Rectangle de la ligne de tir, en coordonnées de la tour.
+func _line_rect() -> Rect2:
+	var length := line_cells() * Grid.CELL
+	var half := Grid.CELL * 0.5
+	match line_dir:
+		Vector2i.RIGHT:
+			return Rect2(half, -half, length, Grid.CELL)
+		Vector2i.LEFT:
+			return Rect2(-half - length, -half, length, Grid.CELL)
+		Vector2i.DOWN:
+			return Rect2(-half, half, Grid.CELL, length)
+	return Rect2(-half, -half - length, Grid.CELL, length)

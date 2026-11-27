@@ -8,6 +8,8 @@ extends Node2D
 ##   2 à 7        : choisir une tour (voir tower_types.gd)
 ##   Espace       : lancer la vague suivante
 ##   F            : vitesse x2
+##   E            : tourner une tour qui porte la Lance du Pharaon (au survol)
+##   Barre du bas  : cliquer une relique, puis une tour, pour l'y poser
 
 const WALL_COST := 2
 const KILL_REWARD := 3
@@ -32,6 +34,7 @@ var goal := Vector2i.ZERO
 var astar := AStarGrid2D.new()       # chemin des ennemis normaux
 var dig_astar := AStarGrid2D.new()   # chemin des fouisseurs, qui passent sous les murs
 var walls := {}                      # Vector2i -> true
+var sealed := {}                     # murs que les fouisseurs ne peuvent pas creuser (Sceau de granit)
 var towers := {}                     # Vector2i -> Tower
 var enemies: Array[Enemy] = []
 var path_previews: Array = []        # un chemin par entrée
@@ -46,6 +49,7 @@ var storm := false
 
 var gold := 0
 var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
+var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
 var ended := false
 var message := ""
 var message_time := 0.0
@@ -119,6 +123,7 @@ func _start_wave() -> void:
 	if ended or wave_running or wave_index >= waves.size() - 1:
 		return
 	wave_index += 1
+	call_deferred("_update_seals")  # la tempête change la portée, donc la zone scellée
 	wave_running = true
 	spawn_queue.assign(waves[wave_index]["enemies"])
 	spawn_timer = 0.0
@@ -136,6 +141,7 @@ func _start_wave() -> void:
 func _end_wave() -> void:
 	wave_running = false
 	storm = false
+	_update_seals()
 	if wave_index >= waves.size() - 1:
 		ended = true
 		_say("Niveau réussi !", 99.0)
@@ -240,6 +246,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_1:
 				selected = ""
+				selected_relic = -1
+			KEY_E:
+				var hover := Grid.world_to_cell(get_global_mouse_position())
+				if towers.has(hover) and towers[hover].is_line():
+					_rotate_line(towers[hover])
 			KEY_SPACE:
 				_start_wave()
 			KEY_F:
@@ -247,6 +258,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		for id in TowerTypes.ORDER:
 			if event.keycode == TowerTypes.get_type(id)["key"]:
 				selected = id
+				selected_relic = -1
 		return
 
 	if ended:
@@ -256,17 +268,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		var bar_slot := _build_bar_slot(pos)
 		if bar_slot >= 0:
 			selected = "" if bar_slot == 0 else TowerTypes.ORDER[bar_slot - 1]
+			selected_relic = -1
+			return
+		var relic_slot := _relic_bar_slot(pos)
+		if relic_slot >= 0:
+			_click_relic(relic_slot)
 			return
 		var cell := Grid.world_to_cell(pos)
 		if not Grid.in_bounds(cell):
 			return
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if selected == "":
+			if selected_relic >= 0:
+				_try_socket(cell, selected_relic)
+			elif selected == "":
 				_try_place_wall(cell)
 			else:
 				_try_place_tower(cell, selected)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			_remove_at(cell)
+			if selected_relic >= 0:
+				selected_relic = -1  # le clic droit annule la relique choisie
+			else:
+				_remove_at(cell)
 
 
 func wall_cost() -> int:
@@ -327,15 +349,86 @@ func _try_place_tower(cell: Vector2i, id: String) -> void:
 func _remove_at(cell: Vector2i) -> void:
 	if towers.has(cell):
 		var t: Tower = towers[cell]
-		gold += tower_cost(t.type_id) / 2  # on récupère la moitié du prix
+		gold += tower_cost(t.type_id) / 2  # on récupère la moitié du prix ; les reliques reviennent dans l'inventaire
 		t.queue_free()
 		towers.erase(cell)
+		_update_seals()
 	elif walls.has(cell):
 		walls.erase(cell)
 		astar.set_point_solid(cell, false)
 		dig_astar.set_point_weight_scale(cell, 1.0)
+		dig_astar.set_point_solid(cell, false)
+		sealed.erase(cell)
 		gold += wall_cost()
 		_on_grid_changed()
+
+
+# --- Reliques ----------------------------------------------------------------
+
+## La tour qui porte une relique, ou null si la relique est libre.
+func relic_owner(index: int) -> Tower:
+	for t in towers.values():
+		if index in t.relics:
+			return t
+	return null
+
+
+func _click_relic(index: int) -> void:
+	if index >= Run.relics.size():
+		return
+	var owner := relic_owner(index)
+	if owner:
+		owner.relics.erase(index)  # on la retire de sa tour
+		_update_seals()
+		_say("%s retirée" % Relics.get_relic(Run.relics[index])["name"])
+		return
+	selected_relic = -1 if selected_relic == index else index
+
+
+func _try_socket(cell: Vector2i, index: int) -> void:
+	if not towers.has(cell):
+		_say("Clique sur une tour pour y poser la relique")
+		return
+	var t: Tower = towers[cell]
+	var id := Run.relics[index]
+	if t.relics.size() >= int(t.data["slots"]):
+		_say("Plus d'emplacement libre (%d)" % t.data["slots"])
+		return
+	if Relics.is_legendary(id):
+		if t.data["attack"] == "support":
+			_say("Le Totem n'attaque pas : pas de légendaire")
+			return
+		if t.has_legendary():
+			_say("Une seule légendaire par tour")
+			return
+	t.relics.append(index)
+	_update_seals()
+	selected_relic = -1
+	if t.is_line():
+		t.line_dir = _best_line_dir(t)
+	_say("%s posée" % Relics.get_relic(id)["name"])
+
+
+## Choisit la direction où la ligne de tir couvre le plus de cases du chemin.
+func _best_line_dir(t: Tower) -> Vector2i:
+	var best := Vector2i.RIGHT
+	var best_count := -1
+	for d in [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+		var count := 0
+		for k in range(1, t.line_cells() + 1):
+			var c: Vector2i = t.cell + d * k
+			for p in path_previews:
+				if c in p:
+					count += 1
+		if count > best_count:
+			best = d
+			best_count = count
+	return best
+
+
+func _rotate_line(t: Tower) -> void:
+	var order := [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+	t.line_dir = order[(order.find(t.line_dir) + 1) % 4]
 
 
 ## Vérifie qu'il reste un chemin depuis chaque entrée ET depuis chaque ennemi déjà en route.
@@ -362,8 +455,34 @@ func _cell_has_enemy(cell: Vector2i) -> bool:
 ## Appelé après chaque changement de la grille : tout le monde recalcule son chemin.
 func _on_grid_changed() -> void:
 	_refresh_paths()
+	_update_seals()
 	for e in enemies:
 		e.repath()
+
+
+## Sceau de granit : les murs à portée d'une tour qui porte la relique deviennent
+## impossibles à creuser. Les fouisseurs doivent alors faire le tour comme les autres.
+func _update_seals() -> void:
+	var new_sealed := {}
+	for t in towers.values():
+		if not is_instance_valid(t) or t.is_queued_for_deletion() or not t.legendary("seal", false):
+			continue
+		for w in walls:
+			if Grid.cell_to_world(w).distance_to(t.global_position) <= t.range_px() + 1.0:
+				new_sealed[w] = true
+	# On ne scelle pas un mur sous lequel un fouisseur est en train de passer.
+	for e in enemies:
+		if e.digs():
+			new_sealed.erase(e.next_cell)
+			new_sealed.erase(Grid.world_to_cell(e.position))
+	if new_sealed == sealed:
+		return
+	sealed = new_sealed
+	for w in walls:
+		dig_astar.set_point_solid(w, sealed.has(w))
+	for e in enemies:
+		if e.digs():
+			e.repath()
 
 
 func _refresh_paths() -> void:
@@ -446,6 +565,13 @@ func _draw() -> void:
 		var r := Grid.cell_rect(cell).grow(-2)
 		draw_rect(r, Color("6b5a45"))
 		draw_rect(r, Color("43382b"), false, 2.0)
+		if sealed.has(cell):
+			# Rune du sceau : un losange bleuté
+			var c := r.get_center()
+			var q := Grid.CELL * 0.22
+			var pts := PackedVector2Array([c + Vector2(0, -q), c + Vector2(q, 0), c + Vector2(0, q), c + Vector2(-q, 0), c + Vector2(0, -q)])
+			draw_polyline(pts, Color("9cc4ff"), 2.0)
+			draw_rect(r, Color(0.6, 0.75, 1.0, 0.5), false, 1.5)
 
 	# Tempête : voile de sable
 	if storm:
@@ -457,7 +583,7 @@ func _draw() -> void:
 		draw_rect(Grid.cell_rect(hover), Color(1, 1, 1, 0.8), false, 2.0)
 		var preview_range := 0.0
 		if towers.has(hover):
-			preview_range = towers[hover].range_px()
+			preview_range = 0.0 if towers[hover].is_line() else towers[hover].range_px()
 		elif selected != "":
 			preview_range = tower_range(selected, hover)
 		if preview_range > 0.0:
@@ -465,6 +591,7 @@ func _draw() -> void:
 
 	_draw_hud(font)
 	_draw_build_bar(font)
+	_draw_relic_bar(font)
 
 
 func _draw_hud(font: Font) -> void:
@@ -534,6 +661,44 @@ func _build_bar_rect(i: int) -> Rect2:
 	return Rect2(i * slot_w + 3, top + 4, slot_w - 6, 40)
 
 
+## Barre des reliques, sous la barre de construction.
+func _draw_relic_bar(font: Font) -> void:
+	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
+	draw_string(font, Vector2(10, top + 20), "Reliques", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+	var hint := "%d/%d" % [Run.relics.size(), Relics.MAX_HELD]
+	draw_string(font, Vector2(10, top + 38), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.5))
+	for i in Relics.MAX_HELD:
+		var r := _relic_bar_rect(i)
+		if i >= Run.relics.size():
+			draw_rect(r, Color(1, 1, 1, 0.03))
+			continue
+		var relic := Relics.get_relic(Run.relics[i])
+		var color: Color = Relics.RARITY_COLORS[relic["rarity"]]
+		var owner := relic_owner(i)
+		var active := i == selected_relic
+		draw_rect(r, Color(1, 1, 1, 0.15) if active else Color(1, 1, 1, 0.06))
+		draw_rect(r, Color("ffe066") if active else Color(color, 0.6), false, 2.0 if active else 1.0)
+		draw_circle(r.position + Vector2(10, 20), 5.0, color)
+		var text_color := Color(1, 1, 1, 0.45) if owner else Color.WHITE
+		draw_string(font, r.position + Vector2(19, 17), relic["name"], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 21, 11, text_color)
+		var status: String = "posée : %s" % owner.data["name"] if owner else Relics.RARITY_NAMES[relic["rarity"]]
+		draw_string(font, r.position + Vector2(19, 33), status, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 21, 11, Color(color, 0.9) if not owner else Color(1, 1, 1, 0.45))
+
+
+func _relic_bar_rect(i: int) -> Rect2:
+	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
+	var left := 84.0
+	var w := (Grid.SCREEN.x - left - 4) / Relics.MAX_HELD
+	return Rect2(left + i * w + 2, top + 4, w - 4, 40)
+
+
+func _relic_bar_slot(pos: Vector2) -> int:
+	for i in Relics.MAX_HELD:
+		if _relic_bar_rect(i).has_point(pos):
+			return i
+	return -1
+
+
 func _build_bar_slot(pos: Vector2) -> int:
 	for i in TowerTypes.ORDER.size() + 1:
 		if _build_bar_rect(i).has_point(pos):
@@ -564,6 +729,13 @@ func _draw_overlay() -> void:
 		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _tower_panel(id, null), true)
 		return
 
+	# Relique dans la barre
+	var rslot := _relic_bar_slot(mouse)
+	if rslot >= 0 and rslot < Run.relics.size():
+		var r := _relic_bar_rect(rslot)
+		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _relic_panel(rslot), true)
+		return
+
 	var cell := Grid.world_to_cell(mouse)
 	# Ennemi sous la souris
 	for e in enemies:
@@ -584,46 +756,105 @@ func _tower_panel(id: String, t: Tower) -> Array:
 	var d := TowerTypes.get_type(id)
 	var lines := [_line(d["name"], 17, Color.WHITE), _line(d["desc"], 13, Color(1, 1, 1, 0.6))]
 	var cell: Vector2i = t.cell if t else Vector2i(-10, -10)
-	var rng := tower_range(id, cell)
-	var range_note := "  (tempête -25 %)" if storm else ""
+	var line_mode: bool = t != null and t.is_line()
+	var effect: float = t.effect_mult() if t else 1.0
 	if d["attack"] != "support":
 		var dmg: float = t._damage() if t else d["damage"]
 		var rate: float = (t._fire_rate() if t else float(biome["tower_cadence"])) / float(d["delay"])
 		if d["attack"] == "poison":
-			lines.append(_line("Poison : %d dégâts/s pendant %d s (%d au total)" % [d["poison_dps"], d["poison_time"], d["poison_dps"] * d["poison_time"]]))
+			var dps: float = t._poison_dps() if t else d["poison_dps"]
+			lines.append(_line("Poison : %s dégâts/s pendant %d s (%d au total)" % [_num(dps), d["poison_time"], roundi(dps * d["poison_time"])]))
 		else:
-			var dmg_note := "  (Cul-de-sac x2)" if t and dmg > float(d["damage"]) else ""
+			var dmg_note := "  (Cul-de-sac x2)" if t and Run.has_joker("cul_de_sac") and blocked_neighbors(cell) >= 3 else ""
 			lines.append(_line("Dégâts : %s%s" % [_num(dmg), dmg_note]))
 		lines.append(_line("Tirs par seconde : %s" % _num(rate)))
-	lines.append(_line("Portée : %d%s" % [rng, range_note]))
+	if line_mode:
+		lines.append(_line("Tir en ligne droite : %d cases (E pour tourner)" % t.line_cells(), 13, Relics.RARITY_COLORS["legendaire"]))
+	else:
+		var rng: float = t.range_px() if t else tower_range(id, cell)
+		lines.append(_line("Portée : %d%s" % [rng, "  (tempête -25 %)" if storm else ""]))
 	match d["attack"]:
 		"single":
-			lines.append(_line("Vise l'ennemi le plus proche de la sortie"))
-			if Run.has_joker("echo"):
+			lines.append(_line("Touche tout ce qui est sur la ligne" if line_mode else "Vise l'ennemi le plus proche de la sortie"))
+			if Run.has_joker("echo") and not line_mode:
 				lines.append(_line("Écho : rebondit sur un 2e ennemi (60 %)", 13, Color("ffd54a")))
 		"splash":
-			var radius: float = d["splash_radius"] * (1.5 if Run.has_joker("artilleur") else 1.0)
-			lines.append(_line("Explosion : rayon %d" % radius))
-			lines.append(_line("Ne tire pas à moins de %d" % d["min_range"]))
+			if line_mode:
+				lines.append(_line("Touche tout ce qui est sur la ligne"))
+			else:
+				var radius: float = t._splash_radius() if t else d["splash_radius"] * (1.5 if Run.has_joker("artilleur") else 1.0)
+				lines.append(_line("Explosion : rayon %d" % radius))
+				lines.append(_line("Ne tire pas à moins de %d" % d["min_range"]))
 		"aura":
 			var slow: float = 0.35 if Run.has_joker("givre_eternel") else d["slow"]
-			var slow_time: float = d["slow_time"] * (2.0 if Run.has_joker("givre_eternel") else 1.0)
-			lines.append(_line("Touche tous les ennemis à portée"))
+			var slow_time: float = d["slow_time"] * (2.0 if Run.has_joker("givre_eternel") else 1.0) * effect
+			lines.append(_line("Touche tout ce qui est sur la ligne" if line_mode else "Touche tous les ennemis à portée"))
 			lines.append(_line("Ralentit de %d %% pendant %s s" % [roundi((1.0 - slow) * 100), _num(slow_time)]))
 		"poison":
-			lines.append(_line("Vise d'abord les ennemis pas encore empoisonnés"))
+			lines.append(_line("Touche tout ce qui est sur la ligne" if line_mode else "Vise d'abord les ennemis pas encore empoisonnés"))
 		"support":
-			var buff: float = d["buff"]
+			var buff: float = t.buff_value() if t else d["buff"]
 			lines.append(_line("N'attaque pas"))
 			lines.append(_line("Tours à portée : +%d %% de cadence" % roundi(buff * 100)))
 			if Run.has_joker("ancetres"):
 				lines.append(_line("Totems ancestraux : les bonus se cumulent", 13, Color("ffd54a")))
+	if t and t.legendary("only_slowed", false):
+		lines.append(_line("Ne vise que les ennemis ralentis", 13, Relics.RARITY_COLORS["legendaire"]))
 	if biome["tower_cadence"] < 1.0:
 		lines.append(_line("Froid : cadence -%d %%" % roundi((1.0 - biome["tower_cadence"]) * 100), 13, Color("9fd3ea")))
+	# Reliques
 	if t:
+		lines.append(_line("Reliques : %d/%d" % [t.relics.size(), d["slots"]], 14, Color.WHITE))
+		for rid in t.relic_ids():
+			var r := Relics.get_relic(rid)
+			lines.append(_line("  • %s : %s" % [r["name"], _short_relic(rid)], 13, Relics.RARITY_COLORS[r["rarity"]]))
 		lines.append(_line("Revente (clic droit) : %d or" % (tower_cost(id) / 2), 13, Color(1, 1, 1, 0.6)))
 	else:
+		lines.append(_line("Emplacements de reliques : %d" % d["slots"]))
 		lines.append(_line("Prix : %d or  ·  se pose sur un mur" % tower_cost(id), 13, Color("ffe066")))
+	return lines
+
+
+## Effet court d'une relique pour la fiche d'une tour.
+func _short_relic(id: String) -> String:
+	var r := Relics.get_relic(id)
+	if r.get("seal", false):
+		return "murs à portée impossibles à creuser, +15 % portée"
+	if not Relics.is_legendary(id):
+		return Relics.describe(id)
+	var parts := []
+	if r.has("damage_x"):
+		parts.append("dégâts x%s" % _num(r["damage_x"]))
+	if r.has("rate_x"):
+		parts.append("cadence x%s" % _num(r["rate_x"]))
+	if r.get("line", false):
+		parts.append("tir en ligne")
+	if r.has("fixed_range"):
+		parts.append("portée 1,5 case")
+	if r.get("only_slowed", false):
+		parts.append("ralentis seulement")
+	return ", ".join(parts)
+
+
+func _relic_panel(index: int) -> Array:
+	var id := Run.relics[index]
+	var r := Relics.get_relic(id)
+	var color: Color = Relics.RARITY_COLORS[r["rarity"]]
+	var lines := [_line(r["name"], 17, Color.WHITE), _line("Relique " + Relics.RARITY_NAMES[r["rarity"]].to_lower(), 13, color)]
+	var words := Relics.describe(id).split(" ")
+	var current := ""
+	for w in words:  # coupe la description en lignes de 50 caractères environ
+		if current.length() + w.length() > 50:
+			lines.append(_line(current))
+			current = ""
+		current += ("" if current == "" else " ") + w
+	if current != "":
+		lines.append(_line(current))
+	var owner := relic_owner(index)
+	if owner:
+		lines.append(_line("Posée sur : %s. Clique pour la retirer." % owner.data["name"], 13, Color(1, 1, 1, 0.6)))
+	else:
+		lines.append(_line("Clique, puis clique sur une tour pour l'y poser.", 13, Color("ffe066")))
 	return lines
 
 

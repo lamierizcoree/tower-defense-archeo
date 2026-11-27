@@ -13,6 +13,7 @@ var current := Vector2i(-1, -1)     # (étage, index) du niveau en cours ; -1 = 
 var visited: Array[Vector2i] = []   # niveaux déjà joués dans ce biome
 var lives := START_LIVES
 var jokers: Array[String] = []
+var relics: Array[String] = []     # inventaire de reliques (voir data/relics.gd)
 var score := 0
 var kills := 0
 var levels_cleared := 0
@@ -25,6 +26,7 @@ func new_run() -> void:
 	biome_index = 0
 	lives = START_LIVES
 	jokers.clear()
+	relics.clear()
 	score = 0
 	kills = 0
 	levels_cleared = 0

@@ -98,8 +98,8 @@ func _draw() -> void:
 			draw_string(font, p + Vector2(10, 22 + k * 20), lines[k], HORIZONTAL_ALIGNMENT_LEFT, 270, 15 if k == 0 else 13, Color.WHITE)
 
 	# Pied de page : état de l'expédition
-	var footer := "Vies %d    Score %d    Jokers (%d/%d) : %s" % [
-		Run.lives, Run.score, Run.jokers.size(), Jokers.MAX_HELD, _joker_names()]
+	var footer := "Vies %d    Score %d    Reliques %d/%d    Jokers (%d/%d) : %s" % [
+		Run.lives, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Jokers.MAX_HELD, _joker_names()]
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 48), footer, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 360, 15, Color.WHITE)
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 22), "Clique sur un niveau entouré pour avancer.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.55))
 
