@@ -47,7 +47,7 @@ static func get_joker(id: String) -> Dictionary:
 
 ## Tire 3 jokers différents que le joueur n'a pas encore.
 ## rare_slots = nombre de cartes qui seront rares si possible (élite : 1, boss : 3).
-static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: int) -> Array[String]:
+static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: int, luck := 0.0) -> Array[String]:
 	var commons: Array[String] = []
 	var rares: Array[String] = []
 	for id in DATA:
@@ -59,7 +59,7 @@ static func draw_choices(rng: RandomNumberGenerator, held: Array, rare_slots: in
 			commons.append(id)
 	var result: Array[String] = []
 	for i in 3:
-		var want_rare := i < rare_slots or rng.randf() < RARE_CHANCE
+		var want_rare := i < rare_slots or rng.randf() < RARE_CHANCE + luck
 		var pool := rares if (want_rare and not rares.is_empty()) else commons
 		if pool.is_empty():
 			pool = rares if not rares.is_empty() else commons

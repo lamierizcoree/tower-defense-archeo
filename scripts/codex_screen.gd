@@ -1,0 +1,98 @@
+extends Node2D
+## Le carnet de l'expédition : la liste de toutes les reliques et de tous les jokers (pouvoirs).
+## Les reliques pas encore débloquées sont masquées, avec le rang qui les débloque.
+
+const TABS := ["Reliques", "Jokers"]
+const BTN_BACK := Rect2(20, 20, 120, 34)
+const ROW_TOP := 120.0
+const ROW_H := 39.0
+
+var tab := 0
+
+
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+
+func _tab_rect(i: int) -> Rect2:
+	return Rect2(Vector2(330 + i * 155, 70), Vector2(145, 32))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		get_tree().change_scene_to_file(Run.codex_return)
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var p := get_global_mouse_position()
+	if BTN_BACK.has_point(p):
+		get_tree().change_scene_to_file(Run.codex_return)
+	for i in TABS.size():
+		if _tab_rect(i).has_point(p):
+			tab = i
+
+
+func _relic_ids() -> Array:
+	var ids := []
+	for rarity in Relics.RARITIES:
+		for id in Relics.DATA:
+			if Relics.DATA[id]["rarity"] == rarity:
+				ids.append(id)
+	return ids
+
+
+func _draw() -> void:
+	var font := ThemeDB.fallback_font
+	var mouse := get_global_mouse_position()
+	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("1f1b22"))
+	draw_string(font, Vector2(0, 46), "Carnet de l'expédition", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 26, Color("ffe066"))
+	UI.button(self, BTN_BACK, "Retour", BTN_BACK.has_point(mouse), true, 15)
+	for i in TABS.size():
+		var r := _tab_rect(i)
+		UI.button(self, r, TABS[i], r.has_point(mouse) or i == tab, true, 15)
+
+	if tab == 0:
+		_draw_relics(font)
+	else:
+		_draw_jokers(font)
+
+
+func _draw_row(font: Font, i: int, color: Color, title: String, label: String, desc: String, dim := false) -> void:
+	var y := ROW_TOP + i * ROW_H
+	if i % 2 == 0:
+		draw_rect(Rect2(20, y - 4, Grid.SCREEN.x - 40, ROW_H), Color(1, 1, 1, 0.03))
+	draw_circle(Vector2(40, y + 15), 7.0, color if not dim else Color(color, 0.3))
+	var text_color := Color.WHITE if not dim else Color(1, 1, 1, 0.4)
+	draw_string(font, Vector2(56, y + 20), title, HORIZONTAL_ALIGNMENT_LEFT, 230, 15, text_color)
+	draw_string(font, Vector2(290, y + 20), label, HORIZONTAL_ALIGNMENT_LEFT, 110, 12, color if not dim else Color(color, 0.5))
+	draw_multiline_string(font, Vector2(405, y + 12), desc, HORIZONTAL_ALIGNMENT_LEFT, 530, 12, 2, text_color if not dim else Color(1, 1, 1, 0.45))
+
+
+func _draw_relics(font: Font) -> void:
+	var ids := _relic_ids()
+	var unlocked := 0
+	for i in ids.size():
+		var id: String = ids[i]
+		var r := Relics.get_relic(id)
+		var color: Color = Relics.RARITY_COLORS[r["rarity"]]
+		var label: String = Relics.RARITY_NAMES[r["rarity"]]
+		if Profile.is_relic_unlocked(id):
+			unlocked += 1
+			_draw_row(font, i, color, r["name"], label, Relics.describe_short(id))
+		else:
+			_draw_row(font, i, color, "? ? ?", label, "Se débloque au rang d'archéologue %d (tu es au rang %d)." % [r["unlock"], Profile.rank], true)
+	var foot := "%d reliques débloquées sur %d  ·  emplacements : Arbalète 2, Baliste 1, Mortier 2, Givre 2, Alambic 2, Totem 3" % [unlocked, ids.size()]
+	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
+
+
+func _draw_jokers(font: Font) -> void:
+	var ids := []
+	for rare in [false, true]:
+		for id in Jokers.DATA:
+			if Jokers.DATA[id]["rare"] == rare:
+				ids.append(id)
+	for i in ids.size():
+		var j := Jokers.get_joker(ids[i])
+		var color := Color("ffd54a") if j["rare"] else Color("c9b48a")
+		_draw_row(font, i, color, j["name"], "Rare" if j["rare"] else "Commun", j["desc"])
+	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d." % Profile.max_jokers()
+	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))

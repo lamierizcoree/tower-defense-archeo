@@ -20,22 +20,22 @@ func _ready() -> void:
 	var relic_room := true  # si l'inventaire est plein, on pourra remplacer une relique
 	var forced_relic: String = {"combat": "", "elite": "rare", "boss": "legendaire"}[node_type]
 	var rare_jokers: int = {"combat": 0, "elite": 1, "boss": 2}[node_type]
-	var jokers := Jokers.draw_choices(Run.rng, Run.jokers, rare_jokers)
+	var jokers := Jokers.draw_choices(Run.rng, Run.jokers, rare_jokers, Profile.luck())
 	var relics_offered := []
 	for i in 3:
 		var relic := ""
 		if relic_room:
 			if i == 0 and forced_relic != "":
-				relic = Relics.draw(Run.rng, forced_relic)
+				relic = Relics.draw(Run.rng, forced_relic, Profile.luck(), Profile.is_relic_unlocked)
 			elif forced_relic == "" and Run.rng.randf() < RELIC_CHANCE:
-				relic = Relics.draw(Run.rng)
+				relic = Relics.draw(Run.rng, "commun", Profile.luck(), Profile.is_relic_unlocked)
 		if relic != "" and not relic in relics_offered:
 			relics_offered.append(relic)
 			choices.append({"kind": "relic", "id": relic})
 		elif not jokers.is_empty():
 			choices.append({"kind": "joker", "id": jokers.pop_front()})
 		elif relic_room:
-			choices.append({"kind": "relic", "id": Relics.draw(Run.rng)})
+			choices.append({"kind": "relic", "id": Relics.draw(Run.rng, "commun", Profile.luck(), Profile.is_relic_unlocked)})
 
 
 func _card_rect(i: int) -> Rect2:
@@ -46,7 +46,7 @@ func _card_rect(i: int) -> Rect2:
 
 func _held_rect(i: int) -> Rect2:
 	var w := 170.0
-	var total := Jokers.MAX_HELD * w + (Jokers.MAX_HELD - 1) * 10.0
+	var total := Profile.max_jokers() * w + (Profile.max_jokers() - 1) * 10.0
 	return Rect2(Vector2((Grid.SCREEN.x - total) / 2.0 + i * (w + 10.0), 520), Vector2(w, 64))
 
 
@@ -103,7 +103,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _take(id: String) -> void:
-	if Run.jokers.size() < Jokers.MAX_HELD:
+	if Run.jokers.size() < Profile.max_jokers():
 		Run.jokers.append(id)
 		Run.reward_done()
 	else:
@@ -119,11 +119,17 @@ func _draw() -> void:
 	if node_type == "boss":
 		title = "%s vaincu ! Choisis une récompense" % EnemyTypes.get_type(Run.biome()["boss"])["name"]
 	if pending != "":
-		title = "Tu as déjà %d jokers : clique sur celui à abandonner" % Jokers.MAX_HELD
+		title = "Tu as déjà %d jokers : clique sur celui à abandonner" % Profile.max_jokers()
 	if pending_relic != "":
 		title = "Tu as déjà %d reliques : clique sur celle à abandonner" % Relics.MAX_HELD
 	draw_string(font, Vector2(0, 60), title, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 28, Color.WHITE)
 	draw_string(font, Vector2(0, 95), "Vies %d    Score %d    Reliques %d/%d" % [Run.lives, Run.score, Run.relics.size(), Relics.MAX_HELD], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 16, Color(1, 1, 1, 0.7))
+	if not Run.new_unlocks.is_empty():
+		var names := []
+		for id in Run.new_unlocks:
+			names.append(Relics.get_relic(id)["name"])
+		var text := "Rang %d atteint ! Nouvelle relique débloquée : %s" % [Profile.rank, ", ".join(names)]
+		draw_string(font, Vector2(0, 128), text, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 15, Color("ffd54a"))
 
 	for i in choices.size():
 		var card: Dictionary = choices[i]
@@ -166,7 +172,7 @@ func _draw() -> void:
 	draw_string(font, skip.position + Vector2(0, 23), skip_text, HORIZONTAL_ALIGNMENT_CENTER, skip.size.x, 16, Color.WHITE)
 
 	# Jokers déjà en main
-	for i in Jokers.MAX_HELD:
+	for i in Profile.max_jokers():
 		var r := _held_rect(i)
 		var hot := pending != "" and r.has_point(mouse) and i < Run.jokers.size()
 		draw_rect(r, Color(1, 1, 1, 0.12 if hot else 0.05))
@@ -177,7 +183,7 @@ func _draw() -> void:
 			draw_string(font, r.position + Vector2(0, 48), "rare" if j["rare"] else "commun", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 12, Color(1, 1, 1, 0.5))
 		else:
 			draw_string(font, r.position + Vector2(0, 38), "vide", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, Color(1, 1, 1, 0.3))
-	draw_string(font, Vector2(0, 612), "Tes jokers (%d/%d)" % [Run.jokers.size(), Jokers.MAX_HELD], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
+	draw_string(font, Vector2(0, 612), "Tes jokers (%d/%d)" % [Run.jokers.size(), Profile.max_jokers()], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
 
 	# Reliques déjà en main
 	for i in Relics.MAX_HELD:

@@ -18,19 +18,27 @@ var score := 0
 var kills := 0
 var levels_cleared := 0
 var victory := false
+var new_unlocks: Array[String] = []   # reliques débloquées au dernier niveau réussi
+var points_gained := 0               # points d'amélioration gagnés à la fin de l'expédition
+var finished := false
+var codex_return := "res://scenes/hub.tscn"   # écran où revenir en quittant le carnet
 
 
 func new_run() -> void:
 	rng.randomize()
 	started = true
 	biome_index = 0
-	lives = START_LIVES
+	lives = START_LIVES + Profile.bonus_lives()
 	jokers.clear()
 	relics.clear()
+	if Profile.starting_relic():
+		relics.append(Relics.draw(rng, "commun", 0.0, Profile.is_relic_unlocked))
 	score = 0
 	kills = 0
 	levels_cleared = 0
 	victory = false
+	finished = false
+	new_unlocks.clear()
 	_start_biome()
 
 
@@ -73,9 +81,12 @@ func enter_level(pos: Vector2i) -> void:
 func level_won() -> void:
 	levels_cleared += 1
 	score += 100 * (biome_index + 1)
+	var boss_id: String = biome()["boss"] if current_node()["type"] == "boss" else ""
+	new_unlocks = Profile.level_cleared(boss_id)
 	if current_node()["type"] == "boss" and biome_index == Biomes.count() - 1:
 		victory = true
 		score += lives * 20
+		_finish()
 		get_tree().change_scene_to_file("res://scenes/end.tscn")
 	else:
 		get_tree().change_scene_to_file("res://scenes/reward.tscn")
@@ -83,7 +94,15 @@ func level_won() -> void:
 
 func level_lost() -> void:
 	victory = false
+	_finish()
 	get_tree().change_scene_to_file("res://scenes/end.tscn")
+
+
+## Fin de l'expédition : le score part dans le profil et donne des points d'amélioration.
+func _finish() -> void:
+	finished = true
+	started = false
+	points_gained = Profile.run_finished(score, victory)
 
 
 ## Appelé quand la récompense est choisie : retour à la carte, ou biome suivant après un boss.

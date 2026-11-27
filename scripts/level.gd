@@ -128,6 +128,7 @@ func _start_wave() -> void:
 	spawn_queue.assign(waves[wave_index]["enemies"])
 	spawn_timer = 0.0
 	storm = _is_storm(wave_index)
+	gold += Profile.wave_gold()  # amélioration Économie
 	if Run.has_joker("detour"):
 		var bonus := 0
 		for p in path_previews:

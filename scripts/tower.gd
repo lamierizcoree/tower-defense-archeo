@@ -105,7 +105,7 @@ func _process(delta: float) -> void:
 ## Vitesse de tir : froid du biome × reliques × bonus des totems voisins.
 func _fire_rate() -> float:
 	var rate: float = Run.biome()["tower_cadence"]
-	rate *= (1.0 + relic_bonus("rate")) * float(legendary("rate_x", 1.0))
+	rate *= (1.0 + relic_bonus("rate")) * float(legendary("rate_x", 1.0)) * Profile.rate_mult()
 	var bonus := 0.0
 	for t in level.towers.values():
 		if t == self or not is_instance_valid(t) or t.data["attack"] != "support":
@@ -120,7 +120,7 @@ func _fire_rate() -> float:
 
 func _damage() -> float:
 	var dmg: float = data["damage"]
-	dmg *= (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0))
+	dmg *= (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult()
 	if Run.has_joker("cul_de_sac") and level.blocked_neighbors(cell) >= 3:
 		dmg *= 2.0
 	return dmg
@@ -128,7 +128,7 @@ func _damage() -> float:
 
 ## Multiplicateur de dégâts des reliques (utilisé pour le poison).
 func _damage_mult() -> float:
-	return (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0))
+	return (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult()
 
 
 func _poison_dps() -> float:
