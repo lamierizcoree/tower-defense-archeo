@@ -149,6 +149,20 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r, body)
 			for k in [-1, 1]:
 				draw_line(Vector2(-r * 0.7, k * r * 0.35), Vector2(r * 0.7, k * r * 0.35), edge, 2.0)
+		"jar":
+			# Jarre ventrue avec un col et un couvercle
+			draw_circle(Vector2(0, r * 0.15), r * 0.85, body)
+			draw_arc(Vector2(0, r * 0.15), r * 0.85, 0.0, TAU, 24, edge, 2.0)
+			draw_rect(Rect2(-r * 0.4, -r, r * 0.8, r * 0.45), body)
+			draw_rect(Rect2(-r * 0.55, -r * 1.05, r * 1.1, r * 0.22), edge)
+			draw_line(Vector2(-r * 0.6, r * 0.15), Vector2(r * 0.6, r * 0.15), edge, 2.0)
+		"larva":
+			# Petite larve en trois segments, orientée vers où elle va
+			var dir := (Grid.cell_to_world(next_cell) - position).normalized()
+			if dir == Vector2.ZERO:
+				dir = Vector2.RIGHT
+			for k in 3:
+				draw_circle(dir * r * (0.7 - k * 0.7), r * (0.75 - k * 0.15), body if k > 0 else body.darkened(0.2))
 		"boss":
 			for k in 8:
 				var a := k * TAU / 8.0

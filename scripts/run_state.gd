@@ -18,6 +18,7 @@ var score := 0
 var kills := 0
 var levels_cleared := 0
 var victory := false
+var boss_killed := false            # le boss du niveau en cours a-t-il été tué ?
 var new_unlocks: Array[String] = []   # reliques débloquées au dernier niveau réussi
 var points_gained := 0               # points d'amélioration gagnés à la fin de l'expédition
 var finished := false
@@ -75,13 +76,14 @@ func reachable() -> Array[Vector2i]:
 func enter_level(pos: Vector2i) -> void:
 	current = pos
 	visited.append(pos)
+	boss_killed = false
 	get_tree().change_scene_to_file("res://scenes/level.tscn")
 
 
 func level_won() -> void:
 	levels_cleared += 1
 	score += 100 * (biome_index + 1)
-	var boss_id: String = biome()["boss"] if current_node()["type"] == "boss" else ""
+	var boss_id: String = biome()["boss"] if current_node()["type"] == "boss" and boss_killed else ""
 	new_unlocks = Profile.level_cleared(boss_id)
 	if current_node()["type"] == "boss" and biome_index == Biomes.count() - 1:
 		victory = true

@@ -83,15 +83,34 @@ static func describe(id: String) -> String:
 
 
 ## Description courte (carnet) : le champ « short » s'il existe, sinon la description complète.
+## Une relique légendaire garantie (boss tué) : on la tire parmi les légendaires débloquées.
+## Si aucune n'est encore débloquée, on donne quand même la plus facile à débloquer.
+static func draw_legendary(rng: RandomNumberGenerator, unlocked: Callable) -> String:
+	var pool := []
+	var easiest := ""
+	for id in DATA:
+		if DATA[id]["rarity"] != "legendaire":
+			continue
+		if unlocked.call(id):
+			pool.append(id)
+		if easiest == "" or int(DATA[id].get("unlock", 0)) < int(DATA[easiest].get("unlock", 0)):
+			easiest = id
+	if pool.is_empty():
+		return easiest
+	return pool[rng.randi_range(0, pool.size() - 1)]
+
+
 static func describe_short(id: String) -> String:
 	return DATA[id].get("short", describe(id))
 
 
 ## Tire une relique débloquée au hasard. min_rarity force une rareté minimale (élite, boss).
 ## luck = chance de monter d'une rareté (amélioration Chance).
+## max_rarity plafonne la rareté (boss qui s'est échappé : rare au maximum).
 ## Si aucune relique de la rareté tirée n'est débloquée, on descend d'une rareté.
-static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0, unlocked: Callable = Callable()) -> String:
-	var allowed := RARITIES.slice(RARITIES.find(min_rarity))
+static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0, unlocked: Callable = Callable(), max_rarity := "legendaire") -> String:
+	var top := RARITIES.find(max_rarity)
+	var allowed := RARITIES.slice(RARITIES.find(min_rarity), top + 1)
 	var total := 0
 	for rar in allowed:
 		total += WEIGHTS[rar]
@@ -102,7 +121,7 @@ static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0
 		if roll <= 0:
 			index = RARITIES.find(rar)
 			break
-	if index < RARITIES.size() - 1 and rng.randf() < luck:
+	if index < top and rng.randf() < luck:
 		index += 1
 	while index >= 0:
 		var pool := []

@@ -93,7 +93,7 @@ Chaque biome a 5 niveaux et une salle de boss, dessinés à la main dans `script
 
 ### Les reliques
 
-Les reliques sont des artefacts déterrés qu'on place dans les emplacements des tours. On les trouve dans les récompenses : parfois après un combat, toujours une rare ou légendaire après une élite, et une légendaire après un boss. On en garde 8 au maximum.
+Les reliques sont des artefacts déterrés qu'on place dans les emplacements des tours. On les trouve dans les récompenses : parfois après un combat, toujours une rare ou légendaire après une élite, et une légendaire après un boss tué (même si aucune n'est encore débloquée : on reçoit alors la plus facile à débloquer). Si le boss s'échappe, il coûte 5 vies et la récompense ne dépasse pas une relique rare. On en garde 8 au maximum.
 
 Pendant un niveau, la barre du bas montre tes reliques. Clique sur une relique, puis sur une tour, pour l'y poser. Clique sur une relique déjà posée pour la retirer. Une tour vendue rend ses reliques, et toutes les reliques reviennent dans l'inventaire au niveau suivant.
 
