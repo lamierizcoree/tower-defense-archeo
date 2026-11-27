@@ -1,6 +1,6 @@
 # Prototype Tower Defense (Godot 4)
 
-Premier prototype du tower defense roguelite en labyrinthe : une grille où l'on pose des murs, des ennemis qui recalculent leur chemin à chaque mur posé, et une seule tour. Tout est dessiné avec des formes simples.
+Premier prototype du tower defense roguelite en labyrinthe : une grille où l'on pose des murs, des ennemis qui recalculent leur chemin à chaque mur posé, et les 6 tours de départ. Tout est dessiné avec des formes simples.
 
 ## Ouvrir et lancer le projet
 
@@ -13,13 +13,25 @@ Premier prototype du tower defense roguelite en labyrinthe : une grille où l'on
 
 | Touche | Action |
 |---|---|
-| Clic gauche | Poser un mur (mode 1) ou une tour sur un mur (mode 2) |
-| Clic droit | Retirer une tour, sinon un mur (remboursé) |
-| 1 / 2 | Mode Mur / mode Tour |
+| Clic gauche | Poser un mur, ou la tour choisie sur un mur |
+| Clic droit | Retirer une tour (moitié du prix rendue), sinon un mur (remboursé) |
+| 1 | Construire des murs |
+| 2 à 7 | Choisir une tour |
 | Espace | Lancer la vague suivante |
 | R | Recommencer |
 
 Les ennemis partent de la case verte et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé.
+
+## Les tours
+
+| Touche | Tour | Prix | Rôle |
+|---|---|---|---|
+| 2 | Arbalète | 15 | Tir rapide sur un ennemi |
+| 3 | Baliste | 30 | Gros dégâts, grande portée, lente |
+| 4 | Mortier | 35 | Dégâts de zone, ne tire pas de près |
+| 5 | Givre | 20 | Ralentit tous les ennemis à portée |
+| 6 | Alambic | 25 | Empoisonne, vise d'abord les ennemis sains |
+| 7 | Totem | 30 | N'attaque pas : les tours voisines tirent 30 % plus vite |
 
 ## Organisation du code
 
@@ -27,6 +39,7 @@ Les ennemis partent de la case verte et vont vers la case violette. Les petits p
 - `scripts/grid.gd` : taille de la grille, entrée, sortie, conversions case ↔ pixels.
 - `scripts/main.gd` : murs, pathfinding (`AStarGrid2D`), vagues, or, vies, affichage.
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
-- `scripts/tower.gd` : la tour à cible unique (future « Arbalète »).
+- `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).
+- `scripts/tower_types.gd` : les chiffres des 6 tours (prix, portée, dégâts, cadence).
 
 Les valeurs à modifier pour tester l'équilibrage (coûts, portée, dégâts, vitesse) sont des constantes en haut de chaque script.
