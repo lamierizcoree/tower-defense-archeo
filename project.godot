@@ -1,0 +1,20 @@
+; Fichier de configuration du projet Godot. Ne pas modifier à la main sauf besoin.
+
+config_version=5
+
+[application]
+
+config/name="Prototype Tower Defense"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=640
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -1,0 +1,25 @@
+class_name Grid
+extends RefCounted
+## Réglages de la grille et conversions entre cases et pixels.
+
+const COLS := 20          # nombre de colonnes
+const ROWS := 12          # nombre de lignes
+const CELL := 48          # taille d'une case en pixels
+const OFFSET := Vector2(0, 64)  # la grille commence sous la barre d'infos
+
+const SPAWN := Vector2i(0, 5)   # case d'apparition des ennemis
+const GOAL := Vector2i(19, 6)   # case que les ennemis veulent atteindre
+
+
+## Centre d'une case, en pixels.
+static func cell_to_world(cell: Vector2i) -> Vector2:
+	return OFFSET + (Vector2(cell) + Vector2(0.5, 0.5)) * CELL
+
+
+## Case qui se trouve sous un point en pixels.
+static func world_to_cell(point: Vector2) -> Vector2i:
+	return Vector2i(((point - OFFSET) / CELL).floor())
+
+
+static func in_bounds(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < COLS and cell.y < ROWS
