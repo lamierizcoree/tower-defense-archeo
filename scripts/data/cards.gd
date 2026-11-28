@@ -48,6 +48,7 @@ const DATA := {
 	"givre": {"name": "Givre", "kind": "tower", "tower": "givre", "unlock": 0},
 	"alambic": {"name": "Alambic", "kind": "tower", "tower": "alambic", "unlock": 0},
 	"totem": {"name": "Totem", "kind": "tower", "tower": "totem", "unlock": 0},
+	"carabine": {"name": "Carabine", "kind": "tower", "tower": "carabine", "unlock": 0},
 	"pointes": {"name": "Fosse à pieux", "short": "Pieux", "kind": "trap", "cost": 8, "unlock": 0,
 		"damage": [30.0, 40.0, 50.0], "waves": [1, 2, 3]},
 	"lampe": {"name": "Huile de lampe", "short": "Huile", "kind": "boost", "cost": 10, "unlock": 0,
@@ -64,7 +65,7 @@ const DATA := {
 
 ## Deck de départ, si le joueur n'en a pas construit (20 cartes).
 const DEFAULT_DECK := {
-	"murs": 6, "arbalete": 4, "givre": 2, "baliste": 2, "mortier": 1,
+	"murs": 6, "arbalete": 3, "carabine": 1, "givre": 2, "baliste": 2, "mortier": 1,
 	"alambic": 1, "totem": 1, "pointes": 2, "lampe": 1,
 }
 

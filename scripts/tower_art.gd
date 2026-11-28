@@ -27,6 +27,8 @@ const SPRITES := {
 	"alambic": {"base": preload("res://art/sprites/alambic_socle.png"), "base_size": 50.0,
 		"top": preload("res://art/sprites/alambic_cuve.png"), "top_size": 42.0, "offset": Vector2(0, -10)},
 	"totem": {"top": preload("res://art/sprites/totem.png"), "top_size": 54.0, "offset": Vector2(0, -6)},
+	"carabine": {"base": preload("res://art/sprites/carabine_socle.png"), "base_size": 51.0,
+		"top": preload("res://art/sprites/carabine_arme.png"), "top_size": 54.0, "rotates": true, "offset": Vector2(0, -8)},
 }
 
 
