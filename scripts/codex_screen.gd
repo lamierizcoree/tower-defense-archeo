@@ -62,7 +62,7 @@ func _draw() -> void:
 var row_h := ROW_H
 
 
-func _draw_row(font: Font, i: int, color: Color, title: String, label: String, desc: String, dim := false) -> void:
+func _draw_row(font: Font, i: int, color: Color, title: String, label: String, desc: String, dim := false, towers: Array = []) -> void:
 	var y := ROW_TOP + i * row_h
 	if i % 2 == 0:
 		draw_rect(Rect2(20, y - 4, Grid.SCREEN.x - 40, row_h), Color(1, 1, 1, 0.03))
@@ -70,7 +70,11 @@ func _draw_row(font: Font, i: int, color: Color, title: String, label: String, d
 	var text_color := Color.WHITE if not dim else Color(1, 1, 1, 0.4)
 	draw_string(font, Vector2(56, y + 20), title, HORIZONTAL_ALIGNMENT_LEFT, 230, 15, text_color)
 	draw_string(font, Vector2(290, y + 20), label, HORIZONTAL_ALIGNMENT_LEFT, 110, 12, color if not dim else Color(color, 0.5))
-	draw_multiline_string(font, Vector2(405, y + 12), desc, HORIZONTAL_ALIGNMENT_LEFT, 530, 12, 2, text_color if not dim else Color(1, 1, 1, 0.45))
+	var desc_w := 530.0 - towers.size() * 26.0
+	draw_multiline_string(font, Vector2(405, y + 12), desc, HORIZONTAL_ALIGNMENT_LEFT, desc_w, 12, 2, text_color if not dim else Color(1, 1, 1, 0.45))
+	if not towers.is_empty() and not dim:
+		# images des tours concernées, au bout de la ligne
+		TowerArt.draw_icon_row(self, towers, Vector2(935 - towers.size() * 13.0, y + 14), 22.0)
 
 
 func _draw_relics(font: Font) -> void:
@@ -84,7 +88,7 @@ func _draw_relics(font: Font) -> void:
 		var label: String = Relics.RARITY_NAMES[r["rarity"]]
 		if Profile.is_relic_unlocked(id):
 			unlocked += 1
-			_draw_row(font, i, color, r["name"], label, Relics.describe_short(id))
+			_draw_row(font, i, color, r["name"], label, Relics.describe_short(id), false, Relics.towers_of(id))
 		else:
 			_draw_row(font, i, color, "? ? ?", label, "Se débloque au rang d'archéologue %d (tu es au rang %d)." % [r["unlock"], Profile.rank], true)
 	var foot := "%d reliques débloquées sur %d  ·  1 relique par tour (2 avec Écrin double), une seule légendaire" % [unlocked, ids.size()]
@@ -101,7 +105,7 @@ func _draw_jokers(font: Font) -> void:
 	for i in ids.size():
 		var j := Jokers.get_joker(ids[i])
 		var fam: Dictionary = Jokers.FAMILIES[j["family"]]
-		_draw_row(font, i, Jokers.color_of(ids[i]), "%s  %s" % [j["name"], fam["symbol"]], Jokers.RARITY_NAMES[j["rarity"]], j["desc"])
+		_draw_row(font, i, Jokers.color_of(ids[i]), "%s  %s" % [j["name"], fam["symbol"]], Jokers.RARITY_NAMES[j["rarity"]], j["desc"], false, Jokers.towers_of(ids[i]))
 	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d." % Profile.max_jokers()
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
 
@@ -115,16 +119,16 @@ func _draw_synergies(font: Font) -> void:
 		for id in Jokers.DATA:
 			if Jokers.family_of(id) == f:
 				members.append(Jokers.get_joker(id)["name"])
-		rows.append([fam["color"], "%s %s" % [fam["symbol"], fam["name"]], "Clan", ", ".join(members)])
-		rows.append([fam["color"], "", "2 jokers", fam["bonus"][2]])
-		rows.append([fam["color"], "", "3 jokers", fam["bonus"][3]])
+		rows.append([fam["color"], "%s %s" % [fam["symbol"], fam["name"]], "Clan", ", ".join(members), []])
+		rows.append([fam["color"], "", "2 jokers", fam["bonus"][2], []])
+		rows.append([fam["color"], "", "3 jokers", fam["bonus"][3], []])
 	for d in Jokers.DUOS:
 		var duo: Dictionary = Jokers.DUOS[d]
 		var a: String = Jokers.get_joker(duo["jokers"][0])["name"]
 		var b: String = Jokers.get_joker(duo["jokers"][1])["name"]
-		rows.append([Color("ff9f6b"), "Duo " + duo["name"], "Duo", "%s + %s : %s" % [a, b, duo["desc"]]])
+		rows.append([Color("ff9f6b"), "Duo " + duo["name"], "Duo", "%s + %s : %s" % [a, b, duo["desc"]], duo.get("towers", [])])
 	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / rows.size())
 	for i in rows.size():
-		_draw_row(font, i, rows[i][0], rows[i][1], rows[i][2], rows[i][3])
+		_draw_row(font, i, rows[i][0], rows[i][1], rows[i][2], rows[i][3], false, rows[i][4])
 	var foot := "Avoir plusieurs jokers d'un même clan, ou les deux jokers d'un duo, débloque un bonus en plus."
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))

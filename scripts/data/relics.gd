@@ -55,10 +55,15 @@ const DATA := {
 	"couronne": {"name": "Couronne du Scarabée-Roi", "rarity": "legendaire", "unlock": 10, "damage_x": 3.0, "rate_x": 1.5, "fixed_range": 72.0,
 		"short": "Dégâts x3 et cadence x1,5, mais portée de 1,5 case.",
 		"desc": "Dégâts x3 et cadence x1,5, mais la portée tombe à 1,5 case : la tour doit être collée au chemin."},
-	"coeur": {"name": "Cœur du Colosse gelé", "rarity": "legendaire", "unlock": 15, "rate_x": 3.0, "only_slowed": true,
+	"coeur": {"name": "Cœur du Colosse gelé", "rarity": "legendaire", "towers": ["givre"], "unlock": 15, "rate_x": 3.0, "only_slowed": true,
 		"short": "Cadence x3, mais ne vise que les ennemis ralentis.",
 		"desc": "Cadence x3, mais la tour ne vise que les ennemis déjà ralentis. À combiner avec le Givre."},
 }
+
+
+## Tours avec lesquelles une relique se combine (pour afficher leur image), ou [].
+static func towers_of(id: String) -> Array:
+	return DATA[id].get("towers", [])
 
 
 static func get_relic(id: String) -> Dictionary:
