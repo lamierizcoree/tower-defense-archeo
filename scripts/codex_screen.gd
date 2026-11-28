@@ -96,6 +96,8 @@ func _draw_relics(font: Font) -> void:
 
 
 func _draw_jokers(font: Font) -> void:
+	var mouse := get_global_mouse_position()
+	var tip := ""
 	var ids := []
 	for rar in Jokers.RARITIES:
 		for id in Jokers.DATA:
@@ -105,9 +107,15 @@ func _draw_jokers(font: Font) -> void:
 	for i in ids.size():
 		var j := Jokers.get_joker(ids[i])
 		var fam: Dictionary = Jokers.FAMILIES[j["family"]]
-		_draw_row(font, i, Jokers.color_of(ids[i]), "%s  %s" % [j["name"], fam["symbol"]], Jokers.RARITY_NAMES[j["rarity"]], j["desc"], false, Jokers.towers_of(ids[i]))
-	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d." % Profile.max_jokers()
+		_draw_row(font, i, Jokers.color_of(ids[i]), "%s  %s" % [j["name"], fam["symbol"]], Jokers.RARITY_NAMES[j["rarity"]], j["desc"])
+		var row := Rect2(20, ROW_TOP + i * row_h - 4, Grid.SCREEN.x - 40, row_h)
+		if row.has_point(mouse):
+			tip = ids[i]
+			draw_rect(row, Color(1, 1, 1, 0.06))
+	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d. Survole un joker pour le détail." % Profile.max_jokers()
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
+	if tip != "":
+		UI.joker_tip(self, tip, mouse)
 
 
 ## Les clans de jokers (bonus à 2 et 3 jokers) et les duos.
