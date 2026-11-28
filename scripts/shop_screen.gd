@@ -81,7 +81,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
 	var tip := ""  # joker survolé : son infobulle est dessinée à la fin
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("2a2118"))
+	draw_rect(Screen.visible_rect(), Color("2a2118"))
 	draw_string(font, Vector2(0, 70), "Le marchand ambulant", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 32, Color("ffe066"))
 	draw_string(font, Vector2(0, 105), "« Tout se vend, tout s'achète. Surtout ce qui vient des tombeaux. »", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 15, Color(1, 1, 1, 0.6))
 	draw_string(font, Vector2(0, 142), "Trésor : %d    Vies : %d    Reliques %d/%d    Jokers %d/%d" % [Run.treasure, Run.lives, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Profile.max_jokers()], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 17, Color.WHITE)

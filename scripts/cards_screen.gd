@@ -111,7 +111,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
 	var tip := ""
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("241e1a"))
+	draw_rect(Screen.visible_rect(), Color("241e1a"))
 	draw_string(font, Vector2(0, 46), "Atelier de cartes", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 30, Color("ffe066"))
 	var sub := "Améliorations à faire : %d  ·  chaque carte s'améliore 2 fois au plus, pour toute l'expédition" % upgrades_left
 	draw_string(font, Vector2(0, 76), sub, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 15, Color.WHITE if upgrades_left > 0 else Color(1, 1, 1, 0.55))

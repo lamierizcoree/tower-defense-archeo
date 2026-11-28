@@ -20,8 +20,16 @@ const DUNES_PER_WAVE := 4
 const STORM_RANGE := 0.75
 const MACON_RANGE := 12.0
 const WAVE_INFO_RECT := Rect2(6, 34, 614, 24)   # zone de la ligne « Prochaine vague » à survoler
-const WAVE_BUTTON := Rect2(846, 6, 106, 26)     # lancer la vague (comme Espace)
-const SPEED_BUTTON := Rect2(846, 36, 106, 22)   # vitesse x2 (comme F)
+
+# Deux dispositions, choisies selon la forme de l'écran (voir pick_layout et screen.gd) :
+#   haute (960x736) : main et reliques sous la grille (écrans 4:3, 16:10 étroits, portrait)
+#   large (1160x656) : main et reliques dans une colonne à droite (16:9, ultra-large, téléphone
+#   en paysage) ; la grille y est plus grande car elle prend toute la hauteur.
+const TALL_SIZE := Vector2(960, 736)
+const WIDE_SIZE := Vector2(1160, 656)
+const PANEL_X := 966.0    # colonne de droite en disposition large
+const PANEL_W := 188.0
+var wide := false
 
 var node: Dictionary
 var biome: Dictionary
@@ -76,8 +84,7 @@ var message_time := 0.0
 var overlay: Node2D   # calque dessiné par-dessus les tours et les ennemis (fiches d'infos)
 
 # Bilan de fin de niveau
-const SUMMARY_PANEL := Rect2(150, 60, 660, 600)
-const SUMMARY_CONTINUE := Rect2(380, 596, 200, 44)
+const SUMMARY_SIZE := Vector2(660, 600)
 var summary: Dictionary = {}     # rempli à la fin du niveau ; vide pendant le jeu
 var level_kills := 0
 var gold_earned := 0             # or gagné pendant le niveau (ennemis, vagues, jokers)
@@ -114,6 +121,7 @@ func _ready() -> void:
 	_refresh_paths()
 	_say("Joue tes cartes, puis lance la vague")
 	var layer := CanvasLayer.new()
+	layer.follow_viewport_enabled = true   # suit la mise à l'échelle de l'écran (screen.gd)
 	add_child(layer)
 	overlay = Node2D.new()
 	layer.add_child(overlay)
@@ -391,7 +399,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not summary.is_empty():
 		var go: bool = event is InputEventKey and event.pressed and event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]
 		go = go or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
-			and SUMMARY_CONTINUE.has_point(get_global_mouse_position()))
+			and _summary_continue().has_point(get_global_mouse_position()))
 		if go:
 			summary = {}
 			Run.level_won()
@@ -429,10 +437,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		var pos := get_global_mouse_position()
 		if event.button_index == MOUSE_BUTTON_LEFT and not towers.has(upgrade_cell):
-			if WAVE_BUTTON.has_point(pos):
+			if _wave_button().has_point(pos):
 				_start_wave()
 				return
-			if SPEED_BUTTON.has_point(pos):
+			if _speed_button().has_point(pos):
 				Engine.time_scale = 2.0 if Engine.time_scale == 1.0 else 1.0
 				return
 		# Menu d'amélioration ouvert : un clic choisit une option, ou ferme le menu
@@ -1010,6 +1018,8 @@ func _draw_hand(font: Font) -> void:
 
 ## Case 0 : réserve de murs (plus large), puis une case par carte.
 func _hand_rect(i: int) -> Rect2:
+	if wide:  # colonne de droite : une carte par ligne
+		return Rect2(PANEL_X, Grid.OFFSET.y + 2 + i * 40, PANEL_W, 36)
 	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL
 	const FIRST := 132.0
 	if i == 0:
@@ -1232,7 +1242,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var colors: Dictionary = biome["colors"]
 
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), colors["background"])
+	draw_rect(Screen.visible_rect(), colors["background"])
 
 	# Cases
 	for x in Grid.COLS:
@@ -1288,6 +1298,8 @@ func _draw() -> void:
 		if preview_range > 0.0:
 			draw_arc(Grid.cell_to_world(hover), preview_range, 0.0, TAU, 48, Color(0.25, 0.5, 0.82, 0.7), 2.0)
 
+	if wide:  # fond de la colonne de droite
+		draw_rect(Rect2(PANEL_X - 4, Grid.OFFSET.y - 2, PANEL_W + 8, WIDE_SIZE.y - Grid.OFFSET.y), Color(0, 0, 0, 0.14))
 	_draw_hud(font)
 	_draw_hand(font)
 	_draw_relic_bar(font)
@@ -1323,11 +1335,29 @@ func _draw_hud(font: Font) -> void:
 			draw_rect(WAVE_INFO_RECT, Color(1, 1, 1, 0.08))
 	draw_string(font, Vector2(12, 50), line2, HORIZONTAL_ALIGNMENT_LEFT, 600, 14, Color(1, 1, 1, 0.75))
 	if message_time > 0.0:
-		draw_string(font, Vector2(630, 50), message, HORIZONTAL_ALIGNMENT_LEFT, 210, 14, Color("ffe066"))
+		draw_string(font, Vector2(630, 50), message, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 750, 14, Color("ffe066"))
 	var mouse := get_global_mouse_position()
 	var can_start := not wave_running and wave_index < waves.size() - 1 and not ended
-	UI.button(self, WAVE_BUTTON, "Vague ▶", WAVE_BUTTON.has_point(mouse), can_start, 15)
-	UI.button(self, SPEED_BUTTON, "Vitesse x2" if Engine.time_scale == 1.0 else "Vitesse x1", SPEED_BUTTON.has_point(mouse), true, 12)
+	var wb := _wave_button()
+	var sb := _speed_button()
+	UI.button(self, wb, "Vague ▶", wb.has_point(mouse), can_start, 15)
+	UI.button(self, sb, "Vitesse x2" if Engine.time_scale == 1.0 else "Vitesse x1", sb.has_point(mouse), true, 12)
+
+
+## Lancer la vague (comme Espace) et vitesse x2 (comme F), en haut à droite.
+func _wave_button() -> Rect2:
+	return Rect2(Grid.SCREEN.x - 114, 6, 106, 26)
+
+
+func _speed_button() -> Rect2:
+	return Rect2(Grid.SCREEN.x - 114, 36, 106, 22)
+
+
+## Choisit la disposition qui affiche la grille le plus grand possible. Appelée par Screen.
+func pick_layout(vis: Vector2) -> Vector2:
+	# à taille presque égale (16:10, Steam Deck), la colonne de droite laisse plus de place aux cartes
+	wide = Screen.fit_zoom(vis, WIDE_SIZE) >= Screen.fit_zoom(vis, TALL_SIZE) * 0.98
+	return WIDE_SIZE if wide else TALL_SIZE
 
 
 func _describe_wave(index: int) -> String:
@@ -1351,10 +1381,15 @@ func _enemy_count_name(t: String, n: int) -> String:
 
 ## Barre des reliques, sous la barre de construction.
 func _draw_relic_bar(font: Font) -> void:
-	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
-	draw_string(font, Vector2(10, top + 20), "Reliques", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	var hint := "%d/%d" % [Run.relics.size(), Relics.MAX_HELD]
-	draw_string(font, Vector2(10, top + 38), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.5))
+	if wide:
+		var y := _relic_bar_rect(0).position.y - 8
+		draw_string(font, Vector2(PANEL_X + 2, y), "Reliques", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(font, Vector2(PANEL_X + 2, y), hint, HORIZONTAL_ALIGNMENT_RIGHT, PANEL_W - 4, 12, Color(1, 1, 1, 0.5))
+	else:
+		var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
+		draw_string(font, Vector2(10, top + 20), "Reliques", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(font, Vector2(10, top + 38), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.5))
 	for i in Relics.MAX_HELD:
 		var r := _relic_bar_rect(i)
 		if i >= Run.relics.size():
@@ -1377,6 +1412,9 @@ func _draw_relic_bar(font: Font) -> void:
 
 
 func _relic_bar_rect(i: int) -> Rect2:
+	if wide:  # sous la main, deux colonnes
+		var w := PANEL_W / 2.0
+		return Rect2(PANEL_X + (i % 2) * w, Grid.OFFSET.y + 2 + (Cards.HAND_MAX + 1) * 40 + 22 + (i / 2) * 40, w - 4, 36)
 	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
 	var left := 84.0
 	var w := (Grid.SCREEN.x - left - 4) / Relics.MAX_HELD
@@ -1419,14 +1457,21 @@ func _draw_overlay() -> void:
 	var slot := _hand_slot(mouse)
 	if slot >= 0:
 		var r := _hand_rect(slot)
-		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _pile_panel() if slot == 0 else _card_panel(slot - 1), true)
+		var lines := _pile_panel() if slot == 0 else _card_panel(slot - 1)
+		if wide:
+			_draw_panel(font, Vector2(r.position.x - 8, r.position.y), lines, false, true)
+		else:
+			_draw_panel(font, Vector2(r.position.x, r.position.y - 8), lines, true)
 		return
 
 	# Relique dans la barre
 	var rslot := _relic_bar_slot(mouse)
 	if rslot >= 0 and rslot < Run.relics.size():
 		var r := _relic_bar_rect(rslot)
-		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _relic_panel(rslot), true)
+		if wide:
+			_draw_panel(font, Vector2(PANEL_X - 8, r.position.y), _relic_panel(rslot), false, true)
+		else:
+			_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _relic_panel(rslot), true)
 		return
 
 	var cell := Grid.world_to_cell(mouse)
@@ -1633,7 +1678,8 @@ func _enemy_panel(e: Enemy) -> Array:
 
 
 ## Dessine une fiche. Si above est vrai, la fiche est posée au-dessus du point donné.
-func _draw_panel(font: Font, at: Vector2, lines: Array, above := false) -> void:
+## above : la fiche finit au-dessus de at ; left : elle finit à gauche de at.
+func _draw_panel(font: Font, at: Vector2, lines: Array, above := false, left := false) -> void:
 	var pad := 10.0
 	var w := 0.0
 	var h := pad
@@ -1643,6 +1689,8 @@ func _draw_panel(font: Font, at: Vector2, lines: Array, above := false) -> void:
 	w += pad * 2
 	h += pad - 6
 	var pos := at - Vector2(0, h) if above else at
+	if left:
+		pos.x -= w
 	pos.x = clampf(pos.x, 4, Grid.SCREEN.x - w - 4)
 	pos.y = clampf(pos.y, 4, Grid.SCREEN.y - h - 4)
 	overlay.draw_rect(Rect2(pos, Vector2(w, h)), Color(0.08, 0.07, 0.09, 0.93), true)
@@ -1682,7 +1730,7 @@ func _tutorial_rects() -> Dictionary:
 	var w := 560.0 if final else TUT_W
 	var text_h := font.get_multiline_string_size(step["text"], HORIZONTAL_ALIGNMENT_LEFT, w - 24, 13).y
 	var h := 44.0 + text_h + 48.0
-	var pos := Vector2((Grid.SCREEN.x - w) / 2.0, 150) if final else Vector2(Grid.SCREEN.x - w - 8, 66)
+	var pos := Vector2((Grid.SCREEN.x - w) / 2.0, 150) if final else Vector2(Grid.COLS * Grid.CELL - w - 8, 66)
 	var p := Rect2(pos, Vector2(w, h))
 	var r := {"panel": p}
 	var by := p.end.y - 38
@@ -1721,7 +1769,7 @@ func _draw_tutorial() -> void:
 	var r := _tutorial_rects()
 	var p: Rect2 = r["panel"]
 	if step["until"] == "end":
-		overlay.draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color(0, 0, 0, 0.5))
+		overlay.draw_rect(Screen.visible_rect(), Color(0, 0, 0, 0.5))
 	overlay.draw_rect(Rect2(p.position + Vector2(4, 5), p.size), Color(0, 0, 0, 0.35))
 	overlay.draw_rect(p, Color("1f1a15"))
 	overlay.draw_rect(p, Color("ffd54a"), false, 2.0)
@@ -1771,8 +1819,8 @@ func _make_summary(treasure_kept: int) -> void:
 func _draw_summary() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	var p := SUMMARY_PANEL
-	overlay.draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color(0, 0, 0, 0.55))
+	var p := _summary_panel()
+	overlay.draw_rect(Screen.visible_rect(), Color(0, 0, 0, 0.55))
 	overlay.draw_rect(p, Color("221d18"))
 	overlay.draw_rect(p, Color("ffd54a"), false, 2.0)
 	var title := "Niveau réussi !"
@@ -1833,5 +1881,15 @@ func _draw_summary() -> void:
 	for i in notes.size():
 		overlay.draw_string(font, Vector2(p.position.x, p.position.y + 462 + i * 22), notes[i], HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 13,
 			Color("ffcf9f") if i > 0 or summary["mission"] == "" else (Color("6fd36a") if summary["mission_ok"] else Color("ff8a6b")))
-	overlay.draw_string(font, Vector2(p.position.x, SUMMARY_CONTINUE.position.y - 16), "Espace ou clic pour continuer", HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 11, Color(1, 1, 1, 0.4))
-	UI.button(overlay, SUMMARY_CONTINUE, "Continuer", SUMMARY_CONTINUE.has_point(mouse))
+	var cont := _summary_continue()
+	overlay.draw_string(font, Vector2(p.position.x, cont.position.y - 16), "Espace ou clic pour continuer", HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 11, Color(1, 1, 1, 0.4))
+	UI.button(overlay, cont, "Continuer", cont.has_point(mouse))
+
+
+## Panneau du bilan, centré dans la zone de jeu.
+func _summary_panel() -> Rect2:
+	return Rect2(((Grid.SCREEN - SUMMARY_SIZE) / 2.0).floor(), SUMMARY_SIZE)
+
+
+func _summary_continue() -> Rect2:
+	return Rect2(_summary_panel().position + Vector2(230, 536), Vector2(200, 44))

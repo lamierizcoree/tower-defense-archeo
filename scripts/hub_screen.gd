@@ -61,7 +61,7 @@ func _can_choose_difficulty() -> bool:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("231d19"))
+	draw_rect(Screen.visible_rect(), Color("231d19"))
 	# Un peu de décor : des dunes et une tente
 	draw_circle(Vector2(150, 900), 380, Color("3a2e22"))
 	draw_circle(Vector2(820, 950), 420, Color("33291f"))

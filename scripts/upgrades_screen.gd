@@ -41,7 +41,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("1f1b22"))
+	draw_rect(Screen.visible_rect(), Color("1f1b22"))
 	draw_string(font, Vector2(0, 46), "Améliorations", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 26, Color("ffe066"))
 	UI.button(self, BTN_BACK, "Retour", BTN_BACK.has_point(mouse), true, 15)
 

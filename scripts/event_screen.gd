@@ -63,7 +63,7 @@ func _apply(effect: Dictionary) -> String:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("1f2430"))
+	draw_rect(Screen.visible_rect(), Color("1f2430"))
 	draw_string(font, Vector2(0, 80), event["name"], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 32, Color("ffe066"))
 	draw_multiline_string(font, Vector2(150, 140), event["text"], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x - 300, 18, -1, Color(1, 1, 1, 0.85))
 	draw_string(font, Vector2(0, 270), "Vies : %d    Trésor : %d" % [Run.lives, Run.treasure], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 16, Color(1, 1, 1, 0.6))
