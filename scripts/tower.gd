@@ -112,7 +112,10 @@ func line_cells() -> int:
 
 ## Multiplicateur des effets spéciaux (ralentissement, poison, explosion, totem).
 func effect_mult() -> float:
-	return (1.0 + relic_bonus("effect")) * tier_power()
+	var m := (1.0 + relic_bonus("effect")) * tier_power()
+	if Run.has_family("alchimistes", 2):
+		m *= 1.0 + Jokers.ALCHIMISTES_EFFECT
+	return m
 
 
 # --- Statistiques ------------------------------------------------------------
@@ -124,7 +127,12 @@ func range_px() -> float:
 	var r: float = level.tower_range(type_id, cell) * (1.0 + relic_bonus("range"))
 	if tier >= 2:
 		r *= TowerTypes.TIER2_RANGE
-	return r * float(spec_val("range_x", 1.0))
+	r *= float(spec_val("range_x", 1.0))
+	if Run.has_family("batisseurs", 2):
+		r *= 1.0 + Jokers.BATISSEURS_RANGE
+	if Run.has_duo("forteresse") and level.blocked_neighbors(cell) >= 3:
+		r *= Jokers.FORTERESSE_RANGE
+	return r
 
 
 ## Bonus de cadence que ce Totem donne à ses voisins.
@@ -157,6 +165,8 @@ func _fire_rate() -> float:
 			else:
 				bonus = maxf(bonus, t.buff_value())
 	rate *= (1.0 + bonus) * (1.0 + pack_bonus()) * float(spec_val("rate_x", 1.0))
+	if Run.has_family("strateges", 2):
+		rate *= 1.0 + Jokers.STRATEGES_RATE
 	if rivalry():
 		rate *= Difficulty.RIVALRY_RATE
 	return rate
@@ -190,6 +200,8 @@ func _damage() -> float:
 	dmg *= tier_power() * float(spec_val("damage_x", 1.0)) * (1.0 + rage_bonus())
 	if Run.has_joker("cul_de_sac") and level.blocked_neighbors(cell) >= 3:
 		dmg *= 2.0
+	if Run.has_family("batisseurs", 3):
+		dmg *= 1.0 + Jokers.BATISSEURS_WALL_DAMAGE * level.blocked_neighbors(cell)
 	return dmg
 
 
@@ -245,7 +257,7 @@ func _attack() -> bool:
 				if second:
 					has_echo = true
 					echo_target = second.global_position - global_position
-					second.take_damage(_damage() * ECHO_DAMAGE)
+					second.take_damage(_damage() * (1.0 if Run.has_duo("arsenal") else ECHO_DAMAGE))
 			target.take_damage(_damage())
 		"splash":
 			var target := _find_target(data.get("min_range", 0.0))
@@ -287,6 +299,8 @@ func _attack() -> bool:
 ## Empoisonne un ennemi (et le rend vulnérable avec la spécialisation Acide).
 func _poison(e: Enemy) -> void:
 	e.apply_poison(_poison_dps(), data["poison_time"])
+	if Run.has_duo("cryotoxine"):
+		e.apply_slow(Jokers.CRYOTOXINE_SLOW, data["poison_time"])
 	var acid: float = spec_val("acid", 0.0)
 	if acid > 0.0:
 		e.acid = acid

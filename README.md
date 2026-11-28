@@ -167,6 +167,26 @@ Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chance
 | Légendaire | Trésor maudit | Or gagné pendant les vagues x2, mais ennemis +25 % de PV |
 | Légendaire | Architecte fou | Les 20 premiers murs de chaque niveau sont gratuits, mais tours +50 % plus chères |
 
+### Les synergies de jokers
+
+Chaque joker appartient à un **clan**. Avoir 2 puis 3 jokers d'un même clan donne un bonus en plus. Certaines paires forment un **duo** avec un effet à part. Les cartes de récompense indiquent ce qu'un joker activerait, et le carnet a un onglet « Synergies ».
+
+| Clan | Jokers | 2 jokers | 3 jokers |
+|---|---|---|---|
+| ■ Bâtisseurs | Maçon, Briques creuses, Fondations, Cul-de-sac, Architecte fou | Tours +10 % de portée | +6 % de dégâts par mur ou rocher collé à la tour |
+| $ Marchands | Pillard, Prime de chasse, Butin de fouille, Long détour, Trésor maudit | +15 or au début de chaque niveau | 75 % de l'or restant devient du trésor (au lieu de 50 %) |
+| ⚗ Alchimistes | Venin glacé, Fiole instable, Givre éternel, Artilleur, Sablier ancien | Effets spéciaux +20 % | Ennemi ralenti et empoisonné : +25 % de dégâts subis |
+| ♜ Stratèges | Écho, Totems ancestraux, Esprit de meute, Écrin double, Rempart | Tours +10 % de cadence | Niveau sans aucune fuite : +2 vies |
+
+| Duo | Jokers | Effet |
+|---|---|---|
+| Forteresse | Maçon + Cul-de-sac | Tour bloquée sur 3 côtés : +25 % de portée |
+| Cryotoxine | Venin glacé + Givre éternel | Le poison ralentit aussi de 15 % |
+| Poudre noire | Fiole instable + Artilleur | Explosion de la Fiole 50 % plus large, dégâts x2 |
+| Chasseur de primes | Prime de chasse + Butin de fouille | Élites et boss : +10 or |
+| Cartographe | Long détour + Sablier ancien | Long détour : +1 or toutes les 2 cases au lieu de 3 |
+| Arsenal | Écho + Esprit de meute | Les rebonds d'Écho font 100 % des dégâts |
+
 ## Les tours
 
 | Touche | Tour | Prix | Rôle |

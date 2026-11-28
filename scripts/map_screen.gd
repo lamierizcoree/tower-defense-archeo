@@ -120,7 +120,11 @@ func _draw() -> void:
 	var footer := "Vies %d    Trésor %d    Score %d    Reliques %d/%d    Jokers (%d/%d) : %s" % [
 		Run.lives, Run.treasure, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Profile.max_jokers(), _joker_names()]
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 48), footer, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 360, 15, Color.WHITE)
-	draw_string(font, Vector2(24, Grid.SCREEN.y - 22), "Clique sur un niveau entouré pour avancer.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.55))
+	var syn := Jokers.active_synergies(Run.jokers)
+	var hint := "Clique sur un niveau entouré pour avancer."
+	if not syn.is_empty():
+		hint = "Synergies : " + ", ".join(syn) + "    ·    " + hint
+	draw_string(font, Vector2(24, Grid.SCREEN.y - 22), hint, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 360, 13, Color(1, 1, 1, 0.55))
 
 
 func _type_color(type: String) -> Color:
