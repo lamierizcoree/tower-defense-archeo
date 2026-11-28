@@ -218,7 +218,12 @@ static func make_waves(rng: RandomNumberGenerator, biome_index: int, floor_index
 		if biome["id"] == "glace":
 			tanks += 1
 		var jars := (1 + difficulty / 3) if difficulty >= 1 else 0
-		var normal := maxi(2, count - fast - diggers - tanks - jars)
+		var flyers := (1 + difficulty / 3) if difficulty >= 2 else 0
+		var healers := 0
+		if difficulty >= 3:
+			healers = 1 + (1 if difficulty >= 7 else 0) + (1 if type == "elite" else 0)
+		var saboteurs := (1 + (difficulty - 4) / 2) if difficulty >= 4 else 0
+		var normal := maxi(2, count - fast - diggers - tanks - jars - flyers - healers - saboteurs)
 
 		var list: Array[String] = []
 		for i in normal:
@@ -231,6 +236,12 @@ static func make_waves(rng: RandomNumberGenerator, biome_index: int, floor_index
 			list.append("colosse")
 		for i in jars:
 			list.append("jarre")
+		for i in flyers:
+			list.append("ibis")
+		for i in healers:
+			list.append("embaumeur")
+		for i in saboteurs:
+			list.append("pilleur")
 		_shuffle(rng, list)
 		if type == "boss" and w == n - 1:
 			list.append(biome["boss"])

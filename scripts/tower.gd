@@ -13,6 +13,7 @@ var line_dir := Vector2i.RIGHT # direction de tir avec la Lance du Pharaon
 var tier := 1                  # niveau de la tour : 1, 2 ou 3
 var spec := ""                 # spécialisation choisie au niveau 3 : "a" ou "b"
 var spent := 0                 # or dépensé (pose + améliorations), la moitié est rendue à la revente
+var jammed := 0.0              # secondes restantes de sabotage (pilleur) ou de gel (Colosse gelé)
 
 # Effets visuels du dernier tir
 var shot_target := Vector2.ZERO
@@ -137,11 +138,23 @@ func range_px() -> float:
 
 ## Bonus de cadence que ce Totem donne à ses voisins.
 func buff_value() -> float:
+	if jammed > 0.0:
+		return 0.0
 	return float(data.get("buff", 0.0)) * effect_mult() * float(spec_val("buff_x", 1.0))
+
+
+## La tour ne fait plus rien pendant "duration" secondes (pilleur, Colosse gelé).
+func jam(duration: float) -> void:
+	jammed = maxf(jammed, duration)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
 	shot_time -= delta
+	if jammed > 0.0:
+		jammed -= delta
+		queue_redraw()
+		return
 	if data["attack"] == "support":
 		queue_redraw()
 		return
@@ -267,7 +280,7 @@ func _attack() -> bool:
 			var center := target.global_position
 			var fire: Variant = spec_val("fire")
 			for e in level.enemies.duplicate():
-				if is_instance_valid(e) and not e.dead and e.global_position.distance_to(center) <= _splash_radius():
+				if is_instance_valid(e) and not e.dead and not e.flies() and e.global_position.distance_to(center) <= _splash_radius():
 					if fire != null:
 						e.apply_poison(fire[0] * _damage_mult() * tier_power(), fire[1])
 					e.take_damage(_damage())
@@ -341,6 +354,8 @@ func _in_line(e: Enemy) -> bool:
 
 ## Cœur du Colosse gelé : seuls les ennemis ralentis peuvent être visés.
 func _target_allowed(e: Enemy) -> bool:
+	if e.flies() and data["attack"] == "splash":
+		return false  # les obus ne touchent pas les ennemis volants
 	return not legendary("only_slowed", false) or e.slow_time > 0.0
 
 
@@ -450,6 +465,11 @@ func _draw() -> void:
 		draw_circle(p, 4.5, Color(0, 0, 0, 0.6))
 		draw_circle(p, 3.5, Relics.RARITY_COLORS[Relics.get_relic(ids[k])["rarity"]])
 
+	if jammed > 0.0:
+		# Tour sabotée ou gelée : voile et compte à rebours
+		draw_rect(Rect2(-s / 2, -s / 2, s, s), Color(0.15, 0.1, 0.25, 0.55))
+		draw_arc(Vector2.ZERO, s * 0.45, -PI / 2, -PI / 2 + TAU * minf(1.0, jammed / 4.0), 24, Color("c8a6ff"), 3.0)
+		return
 	if shot_time > 0.0 and not is_line():
 		match data["attack"]:
 			"single":

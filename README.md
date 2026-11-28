@@ -120,6 +120,21 @@ Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
 
 Chaque biome a 5 niveaux et une salle de boss, dessinés à la main dans `scripts/data/levels.gd`.
 
+### Les ennemis
+
+| Ennemi | Arrive à partir de | Capacité |
+|---|---|---|
+| Éclaireur | début | Aucune |
+| Rapide | début | Très rapide mais fragile |
+| Colosse | niveau 3 | Très résistant, coûte 2 vies |
+| Fouisseur | niveau 2 (désert) | Creuse sous les murs, prend le plus court chemin |
+| Jarre | niveau 2 | Libère 3 larves très rapides en se brisant |
+| Ibis | niveau 3 | Vole tout droit par-dessus les murs. Le Mortier ne peut pas le toucher |
+| Embaumeur | niveau 4 | Soigne les ennemis proches de 6 % de leurs PV par seconde, sauf les empoisonnés |
+| Pilleur | niveau 5 | Toutes les 5 s, bloque la tour la plus proche pendant 2,5 s |
+
+Les deux boss ont **deux phases**. Sous la moitié de ses PV, le Scarabée-Roi accélère et appelle 4 rapides. Le Colosse gelé gèle les tours proches pendant 4 s et libère 2 colosses.
+
 ### Les reliques
 
 Les reliques sont des artefacts déterrés qu'on place dans les emplacements des tours. On les trouve dans les récompenses : parfois après un combat, toujours une rare ou légendaire après une élite, et une légendaire après un boss tué (même si aucune n'est encore débloquée : on reçoit alors la plus facile à débloquer). Si le boss s'échappe, il coûte 5 vies et la récompense ne dépasse pas une relique rare. On en garde 8 au maximum.
