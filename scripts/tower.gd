@@ -195,6 +195,7 @@ func _fire_rate() -> float:
 			else:
 				bonus = maxf(bonus, t.buff_value())
 	rate *= (1.0 + bonus) * (1.0 + pack_bonus()) * float(spec_val("rate_x", 1.0))
+	rate *= 1.0 + level.card_rate_bonus()  # cartes de bonus (Huile de lampe)
 	if Run.has_family("strateges", 2):
 		rate *= 1.0 + Jokers.STRATEGES_RATE
 	if rivalry():
@@ -228,6 +229,7 @@ func _damage() -> float:
 	var dmg: float = data["damage"]
 	dmg *= (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult()
 	dmg *= tier_power() * float(spec_val("damage_x", 1.0)) * (1.0 + rage_bonus())
+	dmg *= 1.0 + level.card_damage_bonus()  # cartes de bonus (Pierre à aiguiser)
 	if Run.has_joker("cul_de_sac") and level.blocked_neighbors(cell) >= 3:
 		dmg *= 2.0
 	if Run.has_family("batisseurs", 3):
@@ -237,7 +239,7 @@ func _damage() -> float:
 
 ## Multiplicateur de dégâts des reliques (utilisé pour le poison).
 func _damage_mult() -> float:
-	return (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult()
+	return (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult() * (1.0 + level.card_damage_bonus())
 
 
 func _poison_dps() -> float:

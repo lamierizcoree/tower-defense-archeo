@@ -30,6 +30,7 @@ var points_gained := 0               # points d'amélioration gagnés à la fin 
 var finished := false
 var codex_return := "res://scenes/hub.tscn"   # écran où revenir en quittant le carnet
 var forge_free := false             # fusion offerte par le feu de camp
+var deck: Array = []                # cartes de l'expédition : {"id", "lvl"} (voir data/cards.gd)
 
 
 func new_run() -> void:
@@ -44,6 +45,7 @@ func new_run() -> void:
 		lives = maxi(1, lives - Difficulty.LIVES_MALUS)
 	jokers.clear()
 	relics.clear()
+	deck = Cards.build(Profile.deck_counts())
 	if Profile.starting_relic():
 		relics.append(Relics.draw(rng, "commun", 0.0, Profile.is_relic_unlocked))
 	score = 0
@@ -182,8 +184,21 @@ func _finish() -> void:
 	points_gained = Profile.run_finished(score, victory)
 
 
-## Appelé quand la récompense est choisie : retour à la carte, ou biome suivant après un boss.
+## Appelé quand la récompense est choisie : on passe à l'atelier de cartes.
 func reward_done() -> void:
+	get_tree().change_scene_to_file("res://scenes/cards.tscn")
+
+
+## Améliore une carte du deck (au plus Cards.MAX_LEVEL fois). Renvoie vrai si c'est fait.
+func upgrade_card(index: int) -> bool:
+	if index < 0 or index >= deck.size() or deck[index]["lvl"] >= Cards.MAX_LEVEL:
+		return false
+	deck[index]["lvl"] += 1
+	return true
+
+
+## Fin de l'atelier de cartes : retour à la carte, ou biome suivant après un boss.
+func cards_done() -> void:
 	if current_node()["type"] == "boss":
 		biome_index += 1
 		_start_biome()
