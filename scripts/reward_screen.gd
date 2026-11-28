@@ -222,7 +222,7 @@ func _draw() -> void:
 	var syn := Jokers.active_synergies(Run.jokers)
 	var held_txt := "Tes jokers (%d/%d)" % [Run.jokers.size(), Profile.max_jokers()]
 	if not syn.is_empty():
-		held_txt += "  ·  Synergies : " + ", ".join(syn)
+		held_txt += "  ·  Synergies : " + ", ".join(syn) + "  (survole pour le détail)"
 	draw_string(font, Vector2(0, 612), held_txt, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5) if syn.is_empty() else Color("ffcf9f"))
 
 	# Reliques déjà en main
@@ -240,4 +240,6 @@ func _draw() -> void:
 			draw_rect(r, Color(1, 1, 1, 0.15), false, 1.0)
 	draw_string(font, Vector2(0, 718), "Tes reliques (%d/%d)" % [Run.relics.size(), Relics.MAX_HELD], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
 	if tip != "":
-		UI.joker_tip(self, tip, mouse)
+		UI.joker_tip(self, tip, mouse, Run.jokers)
+	elif not syn.is_empty() and Rect2(0, 596, Grid.SCREEN.x, 22).has_point(mouse):
+		UI.synergy_tip(self, Run.jokers, mouse)

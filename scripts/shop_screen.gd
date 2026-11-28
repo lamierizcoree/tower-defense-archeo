@@ -134,4 +134,4 @@ func _draw() -> void:
 	draw_string(font, Vector2(0, 520), "Le trésor vient de l'or qu'il te reste à la fin de chaque niveau (la moitié est gardée).", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
 	UI.button(self, LEAVE, "Repartir", LEAVE.has_point(mouse))
 	if tip != "":
-		UI.joker_tip(self, tip, mouse)
+		UI.joker_tip(self, tip, mouse, Run.jokers)

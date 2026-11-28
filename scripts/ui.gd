@@ -13,21 +13,82 @@ static func button(canvas: CanvasItem, rect: Rect2, text: String, hot: bool, ena
 	canvas.draw_string(font, rect.position + Vector2(0, rect.size.y / 2 + size * 0.35), text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, size, color)
 
 
-## Infobulle d'un joker, affichée au survol : nom, rareté, clan, descriptif,
-## duo éventuel et images des tours concernées. À dessiner en dernier.
-static func joker_tip(canvas: CanvasItem, id: String, mouse: Vector2) -> void:
+
+## Infobulle d'un joker, affichée au survol : nom, rareté, descriptif, synergies
+## (clan et duo, avec leurs effets et s'ils sont actifs) et images des tours concernées.
+## held = jokers en main (null hors expédition : on montre juste les règles). À dessiner en dernier.
+static func joker_tip(canvas: CanvasItem, id: String, mouse: Vector2, held = null) -> void:
 	var font := ThemeDB.fallback_font
 	var j := Jokers.get_joker(id)
 	var color := Jokers.color_of(id)
-	var fam: Dictionary = Jokers.FAMILIES[j["family"]]
 	var towers := Jokers.towers_of(id)
-	var desc: String = j["desc"]
-	var partner := Jokers.partner_of(id)
-	if partner != "":
-		desc += "\nDuo avec %s." % Jokers.get_joker(partner)["name"]
-	const W := 300.0
-	var text_h := font.get_multiline_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, W - 24, 14).y
-	var h := 62.0 + text_h + 14.0
+	const W := 340.0
+	const IN := 12.0
+	const ON := Color("8fdc6a")      # effet actif
+	const NEXT := Color("ffb070")    # effet débloqué si on prend ce joker
+	const OFF := Color(1, 1, 1, 0.45)
+	# Lignes de texte : [texte, taille, couleur, retrait]
+	var lines: Array = []
+	lines.append([j["desc"], 14, Color(1, 1, 1, 0.9), 0.0])
+
+	var in_run: bool = held != null
+	var hand: Array = held if in_run else []
+	var owned: bool = id in hand
+	var after := hand.duplicate()
+	if not owned:
+		after.append(id)
+
+	# Clan : bonus à 2 et 3 jokers
+	var f := Jokers.family_of(id)
+	var fam: Dictionary = Jokers.FAMILIES[f]
+	var head := "%s Clan %s" % [fam["symbol"], fam["name"]]
+	if in_run:
+		head += "  (%d en main%s)" % [Jokers.family_count(hand, f), "" if owned else ", %d avec lui" % Jokers.family_count(after, f)]
+	lines.append(["", 6, OFF, 0.0])
+	lines.append([head, 14, fam["color"], 0.0])
+	var lvl_now := Jokers.family_level(hand, f)
+	var lvl_after := Jokers.family_level(after, f)
+	for step in Jokers.FAMILY_STEPS:
+		var state := ""
+		var c := OFF
+		if in_run and lvl_now >= step:
+			state = "actif"
+			c = ON
+		elif in_run and lvl_after >= step:
+			state = "débloqué en le prenant"
+			c = NEXT
+		var txt := "%d jokers : %s" % [step, fam["bonus"][step]]
+		if state != "":
+			txt += "  [%s]" % state
+		lines.append([txt, 13, c, IN])
+
+	# Duo : une paire précise de jokers
+	var duo := Jokers.duo_of(id)
+	if duo != "":
+		var d: Dictionary = Jokers.DUOS[duo]
+		var partner: String = Jokers.get_joker(Jokers.partner_of(id))["name"]
+		lines.append(["", 6, OFF, 0.0])
+		lines.append(["Duo %s  (avec %s)" % [d["name"], partner], 14, Color("ffcf9f"), 0.0])
+		var c := OFF
+		var txt: String = d["desc"]
+		if in_run and Jokers.has_duo(hand, duo):
+			c = ON
+			txt += "  [actif]"
+		elif in_run and Jokers.has_duo(after, duo):
+			c = NEXT
+			txt += "  [débloqué en le prenant]"
+		elif in_run:
+			txt += "  [il manque %s]" % partner
+		lines.append([txt, 13, c, IN])
+
+	# Hauteur totale
+	var heights: Array = []
+	var text_h := 0.0
+	for l in lines:
+		var hh: float = l[1] if l[0] == "" else font.get_multiline_string_size(l[0], HORIZONTAL_ALIGNMENT_LEFT, W - 24 - l[3], l[1]).y
+		heights.append(hh)
+		text_h += hh + 2.0
+	var h := 56.0 + text_h + 10.0
 	if not towers.is_empty():
 		h += 78.0
 	# près de la souris, sans sortir de l'écran
@@ -42,12 +103,17 @@ static func joker_tip(canvas: CanvasItem, id: String, mouse: Vector2) -> void:
 	canvas.draw_rect(r, Color("1d1a24"))
 	canvas.draw_rect(r, color, false, 2.0)
 	canvas.draw_string(font, r.position + Vector2(12, 26), j["name"], HORIZONTAL_ALIGNMENT_LEFT, W - 24, 18, Color.WHITE)
-	var sub := "Joker %s · %s %s" % [Jokers.RARITY_NAMES[j["rarity"]].to_lower(), fam["symbol"], fam["name"]]
+	var sub := "Joker %s%s" % [Jokers.RARITY_NAMES[j["rarity"]].to_lower(), "  ·  en main" if owned else ""]
 	canvas.draw_string(font, r.position + Vector2(12, 46), sub, HORIZONTAL_ALIGNMENT_LEFT, W - 24, 13, color)
-	canvas.draw_multiline_string(font, r.position + Vector2(12, 72), desc, HORIZONTAL_ALIGNMENT_LEFT, W - 24, 14, -1, Color(1, 1, 1, 0.88))
+	var y := r.position.y + 56.0
+	for k in lines.size():
+		var l: Array = lines[k]
+		if l[0] != "":
+			canvas.draw_multiline_string(font, Vector2(r.position.x + 12 + l[3], y + l[1]), l[0], HORIZONTAL_ALIGNMENT_LEFT, W - 24 - l[3], l[1], -1, l[2])
+		y += heights[k] + 2.0
 	if towers.is_empty():
 		return
-	var y := r.position.y + 62.0 + text_h + 10.0
+	y += 6.0
 	canvas.draw_line(Vector2(r.position.x + 12, y), Vector2(r.end.x - 12, y), Color(1, 1, 1, 0.15), 1.0)
 	canvas.draw_string(font, Vector2(r.position.x + 12, y + 18), "Tours concernées", HORIZONTAL_ALIGNMENT_LEFT, W - 24, 12, Color(1, 1, 1, 0.55))
 	var slot := 70.0
@@ -56,3 +122,43 @@ static func joker_tip(canvas: CanvasItem, id: String, mouse: Vector2) -> void:
 		var cx := x0 + slot * (i + 0.5)
 		TowerArt.draw_icon(canvas, towers[i], Vector2(cx, y + 42), 34.0)
 		canvas.draw_string(font, Vector2(cx - slot / 2.0, y + 72), TowerTypes.get_type(towers[i])["name"], HORIZONTAL_ALIGNMENT_CENTER, slot, 12, Color.WHITE)
+
+
+## Infobulle des synergies actives (clans et duos) avec leurs effets.
+static func synergy_tip(canvas: CanvasItem, held: Array, mouse: Vector2) -> void:
+	var font := ThemeDB.fallback_font
+	const W := 380.0
+	var lines: Array = []   # [texte, taille, couleur]
+	for f in Jokers.FAMILIES:
+		var lvl := Jokers.family_level(held, f)
+		if lvl == 0:
+			continue
+		var fam: Dictionary = Jokers.FAMILIES[f]
+		lines.append(["%s %s  (%d jokers)" % [fam["symbol"], fam["name"], Jokers.family_count(held, f)], 14, fam["color"]])
+		for step in Jokers.FAMILY_STEPS:
+			if lvl >= step:
+				lines.append(["%d : %s" % [step, fam["bonus"][step]], 13, Color(1, 1, 1, 0.88)])
+	for d in Jokers.DUOS:
+		if Jokers.has_duo(held, d):
+			lines.append(["Duo " + Jokers.DUOS[d]["name"], 14, Color("ffcf9f")])
+			lines.append([Jokers.DUOS[d]["desc"], 13, Color(1, 1, 1, 0.88)])
+	if lines.is_empty():
+		return
+	var heights: Array = []
+	var h := 40.0
+	for l in lines:
+		var hh := font.get_multiline_string_size(l[0], HORIZONTAL_ALIGNMENT_LEFT, W - 24, l[1]).y
+		heights.append(hh)
+		h += hh + 3.0
+	var pos := Vector2(clampf(mouse.x - W / 2.0, 8.0, Grid.SCREEN.x - W - 8), mouse.y - h - 14)
+	if pos.y < 8:
+		pos.y = mouse.y + 18
+	var r := Rect2(pos, Vector2(W, h))
+	canvas.draw_rect(Rect2(r.position + Vector2(4, 5), r.size), Color(0, 0, 0, 0.4))
+	canvas.draw_rect(r, Color("1d1a24"))
+	canvas.draw_rect(r, Color("ff9f6b"), false, 2.0)
+	canvas.draw_string(font, r.position + Vector2(12, 24), "Synergies actives", HORIZONTAL_ALIGNMENT_LEFT, W - 24, 16, Color.WHITE)
+	var y := r.position.y + 36.0
+	for k in lines.size():
+		canvas.draw_multiline_string(font, Vector2(r.position.x + 12, y + lines[k][1]), lines[k][0], HORIZONTAL_ALIGNMENT_LEFT, W - 24, lines[k][1], -1, lines[k][2])
+		y += heights[k] + 3.0

@@ -115,7 +115,7 @@ func _draw_jokers(font: Font) -> void:
 	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d. Survole un joker pour le détail." % Profile.max_jokers()
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
 	if tip != "":
-		UI.joker_tip(self, tip, mouse)
+		UI.joker_tip(self, tip, mouse, Run.jokers if Run.codex_return.ends_with("map.tscn") else null)
 
 
 ## Les clans de jokers (bonus à 2 et 3 jokers) et les duos.
