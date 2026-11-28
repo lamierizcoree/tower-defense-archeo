@@ -15,6 +15,8 @@ var spec := ""                 # spécialisation choisie au niveau 3 : "a" ou "b
 var spent := 0                 # or dépensé (pose + améliorations), la moitié est rendue à la revente
 var dealt := 0.0              # dégâts infligés dans ce niveau (bilan)
 var kills := 0                 # ennemis achevés dans ce niveau (bilan)
+var aim := -PI / 2            # direction de l'arme (dessin), vers le haut au départ
+var aim_target := -PI / 2
 var jammed := 0.0              # secondes restantes de sabotage (pilleur) ou de gel (Colosse gelé)
 
 # Effets visuels du dernier tir
@@ -163,6 +165,9 @@ func jam(duration: float) -> void:
 
 func _process(delta: float) -> void:
 	shot_time -= delta
+	if is_line():
+		aim_target = Vector2(line_dir).angle()
+	aim = lerp_angle(aim, aim_target, minf(1.0, delta * 14.0))
 	if jammed > 0.0:
 		jammed -= delta
 		queue_redraw()
@@ -417,6 +422,7 @@ func _closest_other(target: Enemy) -> Enemy:
 func _show_shot(target: Enemy) -> void:
 	shot_target = target.global_position - global_position
 	shot_time = SHOT_DURATION
+	aim_target = shot_target.angle()
 
 
 func _draw() -> void:
@@ -429,39 +435,9 @@ func _draw() -> void:
 		var flash := shot_time > 0.0
 		draw_rect(band, Color(1.0, 0.75, 0.2, 0.45 if flash else 0.14))
 		draw_rect(band, Color(1.0, 0.75, 0.2, 0.6), false, 1.5)
-	match data["attack"]:
-		"single":
-			if type_id == "baliste":
-				# Losange
-				var pts := PackedVector2Array([Vector2(0, -s / 2), Vector2(s / 2, 0), Vector2(0, s / 2), Vector2(-s / 2, 0)])
-				draw_colored_polygon(pts, color)
-				pts.append(pts[0])
-				draw_polyline(pts, dark, 2.0)
-			else:
-				draw_rect(Rect2(-s / 2, -s / 2, s, s), color)
-				draw_rect(Rect2(-s / 2, -s / 2, s, s), dark, false, 2.0)
-		"splash":
-			draw_circle(Vector2.ZERO, s / 2, color)
-			draw_arc(Vector2.ZERO, s / 2, 0.0, TAU, 24, dark, 2.0)
-			draw_circle(Vector2.ZERO, s / 5, dark)
-		"aura":
-			# Étoile de givre
-			for i in 3:
-				var dir := Vector2.from_angle(i * PI / 3) * s / 2
-				draw_line(-dir, dir, color, 6.0)
-			draw_circle(Vector2.ZERO, 6.0, Color.WHITE)
-		"poison":
-			# Fiole : rond + goulot
-			draw_rect(Rect2(-5, -s / 2, 10, s / 3), dark)
-			draw_circle(Vector2(0, 4), s / 3, color)
-			draw_arc(Vector2(0, 4), s / 3, 0.0, TAU, 24, dark, 2.0)
-		"support":
-			# Triangle
-			var pts := PackedVector2Array([Vector2(0, -s / 2), Vector2(s / 2, s / 2), Vector2(-s / 2, s / 2)])
-			draw_colored_polygon(pts, color)
-			pts.append(pts[0])
-			draw_polyline(pts, dark, 2.0)
-			draw_arc(Vector2.ZERO, range_px(), 0.0, TAU, 48, Color(color, 0.25), 1.5)
+	TowerArt.draw(self, type_id, color, aim, shot_time / SHOT_DURATION if shot_time > 0.0 else 0.0)
+	if data["attack"] == "support":
+		draw_arc(Vector2.ZERO, range_px(), 0.0, TAU, 48, Color(color, 0.25), 1.5)
 
 	# Niveau de la tour : un chevron doré par niveau au-dessus du premier
 	for k in tier - 1:

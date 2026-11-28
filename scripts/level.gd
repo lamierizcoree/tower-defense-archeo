@@ -863,17 +863,9 @@ func _draw() -> void:
 	draw_rect(Grid.cell_rect(goal).grow(-4), Color("8e44ad"))
 
 	# Murs
+	Art.draw_wall_shadows(self, walls)
 	for cell in walls:
-		var r := Grid.cell_rect(cell).grow(-2)
-		draw_rect(r, Color("6b5a45"))
-		draw_rect(r, Color("43382b"), false, 2.0)
-		if sealed.has(cell):
-			# Rune du sceau : un losange bleuté
-			var c := r.get_center()
-			var q := Grid.CELL * 0.22
-			var pts := PackedVector2Array([c + Vector2(0, -q), c + Vector2(q, 0), c + Vector2(0, q), c + Vector2(-q, 0), c + Vector2(0, -q)])
-			draw_polyline(pts, Color("9cc4ff"), 2.0)
-			draw_rect(r, Color(0.6, 0.75, 1.0, 0.5), false, 1.5)
+		Art.draw_wall(self, cell, walls, biome["id"], sealed.has(cell))
 
 	# Tempête : voile de sable
 	if storm:
