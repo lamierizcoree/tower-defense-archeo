@@ -259,3 +259,16 @@ Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur v
 - `scripts/tower_types.gd` : les chiffres des 6 tours (prix, portée, dégâts, cadence).
 
 Les valeurs à modifier pour tester l'équilibrage (coûts, portée, dégâts, vitesse) sont des constantes en haut de chaque script.
+
+## Version web (téléphone, tablette, navigateur)
+
+Le jeu tourne aussi dans un navigateur, y compris Safari sur iPhone : ouvrir le lien, puis « Partager > Sur l'écran d'accueil » pour le lancer en plein écran comme une app. Tourner le téléphone à l'horizontale.
+
+Contrôles tactiles (`scripts/touch.gd`) :
+- toucher = clic (au moment où on lève le doigt) ;
+- laisser le doigt = l'infobulle s'affiche ; un appui long (0,5 s) fait un clic droit : retirer un mur ou une tour, annuler une relique ;
+- boutons **Vague ▶** et **Vitesse x2** en haut à droite du niveau (remplacent Espace et F).
+
+Les symboles (★ ⚔ ☠ ⚗...) viennent de la police DejaVu Sans fournie dans `art/fonts/`, car le navigateur ne donne pas accès aux polices du système.
+
+Pour refaire l'export : installer les modèles d'export de Godot 4.7, puis `GODOT=/chemin/vers/godot sh tools/export_web.sh`. Le résultat (`build/web`) se publie sur la branche `gh-pages`, servie par GitHub Pages.
