@@ -8,6 +8,7 @@ const BTN_CODEX := Rect2(330, 434, 300, 40)
 const BTN_DECK := Rect2(330, 480, 300, 40)
 const BTN_UPGRADES := Rect2(330, 526, 300, 40)
 const BTN_RESET := Rect2(790, 690, 160, 32)
+const BTN_TUTORIAL := Rect2(10, 690, 200, 32)
 const BTN_DIFF_DOWN := Rect2(330, 580, 44, 40)
 const BTN_DIFF_UP := Rect2(586, 580, 44, 40)
 
@@ -32,6 +33,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif BTN_CODEX.has_point(p):
 		Run.codex_return = "res://scenes/hub.tscn"
 		get_tree().change_scene_to_file("res://scenes/codex.tscn")
+	elif BTN_TUTORIAL.has_point(p):
+		Run.start_tutorial()
 	elif BTN_DECK.has_point(p):
 		get_tree().change_scene_to_file("res://scenes/deck.tscn")
 	elif BTN_UPGRADES.has_point(p):
@@ -88,6 +91,9 @@ func _draw() -> void:
 	var free := Profile.points_available() - Profile.points_used()
 	UI.button(self, BTN_UPGRADES, "Améliorations" + (" (%d à répartir)" % free if free > 0 else ""), BTN_UPGRADES.has_point(mouse))
 	_draw_difficulty(font, mouse)
+	if not Profile.tutorial_done:
+		draw_rect(BTN_TUTORIAL.grow(3), Color(1, 0.88, 0.4, 0.25 + 0.2 * sin(Time.get_ticks_msec() / 300.0)))
+	UI.button(self, BTN_TUTORIAL, "Tutoriel" if Profile.tutorial_done else "Tutoriel (conseillé)", BTN_TUTORIAL.has_point(mouse), true, 14)
 	UI.button(self, BTN_RESET, "Sûr ? Clique encore" if confirm_reset else "Effacer le profil", BTN_RESET.has_point(mouse), true, 12)
 
 
