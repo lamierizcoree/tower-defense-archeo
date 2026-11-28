@@ -18,6 +18,9 @@ var score := 0
 var kills := 0
 var levels_cleared := 0
 var victory := false
+var treasure := 0                   # trésor : la moitié de l'or restant à la fin de chaque niveau, dépensé chez le marchand
+var mission := ""                   # mission de la fouille en cours (voir data/missions.gd)
+var mission_ok := false
 var difficulty := 0                 # niveau de difficulté de l'expédition (voir data/difficulty.gd)
 var difficulty_unlocked_now := false  # cette expédition a débloqué un nouveau niveau
 var score_bonus := 0                # score ajouté par la difficulté à la fin
@@ -43,6 +46,7 @@ func new_run() -> void:
 	if Profile.starting_relic():
 		relics.append(Relics.draw(rng, "commun", 0.0, Profile.is_relic_unlocked))
 	score = 0
+	treasure = 0
 	kills = 0
 	levels_cleared = 0
 	victory = false
@@ -85,7 +89,58 @@ func enter_level(pos: Vector2i) -> void:
 	current = pos
 	visited.append(pos)
 	boss_killed = false
-	get_tree().change_scene_to_file("res://scenes/level.tscn")
+	var type: String = current_node()["type"]
+	match type:
+		"shop":
+			get_tree().change_scene_to_file("res://scenes/shop.tscn")
+		"event":
+			get_tree().change_scene_to_file("res://scenes/event.tscn")
+		"camp":
+			get_tree().change_scene_to_file("res://scenes/camp.tscn")
+		_:
+			mission = Missions.random_id(rng) if type == "fouille" else ""
+			mission_ok = false
+			get_tree().change_scene_to_file("res://scenes/level.tscn")
+
+
+## Fin d'une étape sans combat (marchand, événement, camp) : retour à la carte.
+func stop_done() -> void:
+	get_tree().change_scene_to_file("res://scenes/map.tscn")
+
+
+## Ajoute une relique tirée au hasard (rareté minimale). Si l'inventaire est plein,
+## elle est revendue : renvoie le nom de la relique, ou un texte qui explique la vente.
+func gain_relic(min_rarity: String) -> String:
+	var id := Relics.draw(rng, min_rarity, Profile.luck(), Profile.is_relic_unlocked)
+	var r := Relics.get_relic(id)
+	if relics.size() >= Relics.MAX_HELD:
+		treasure += 30
+		return "%s (inventaire plein : revendue 30 trésor)" % r["name"]
+	relics.append(id)
+	return "%s (%s)" % [r["name"], Relics.RARITY_NAMES[r["rarity"]].to_lower()]
+
+
+## Ajoute un joker d'une rareté donnée (ou la plus proche disponible).
+func gain_joker(rarity: String) -> String:
+	if jokers.size() >= Profile.max_jokers():
+		treasure += 30
+		return "aucun joker (main pleine : +30 trésor)"
+	var pool := []
+	var others := []
+	for id in Jokers.DATA:
+		if id in jokers:
+			continue
+		if Jokers.rarity_of(id) == rarity:
+			pool.append(id)
+		else:
+			others.append(id)
+	if pool.is_empty():
+		pool = others
+	if pool.is_empty():
+		return "aucun joker disponible"
+	var pick: String = pool[rng.randi_range(0, pool.size() - 1)]
+	jokers.append(pick)
+	return Jokers.get_joker(pick)["name"]
 
 
 func level_won() -> void:

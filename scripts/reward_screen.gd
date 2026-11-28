@@ -19,9 +19,10 @@ var node_type := ""
 func _ready() -> void:
 	node_type = Run.current_node()["type"]
 	var relic_room := true  # si l'inventaire est plein, on pourra remplacer une relique
-	var forced_relic: String = {"combat": "", "elite": "rare", "boss": "legendaire" if Run.boss_killed else "rare"}[node_type]
+	var forced_relic: String = {"combat": "", "elite": "rare", "boss": "legendaire" if Run.boss_killed else "rare",
+		"fouille": "rare" if Run.mission_ok else ""}[node_type]
 	var max_rarity := "rare" if node_type == "boss" and not Run.boss_killed else "legendaire"
-	var rare_jokers: int = {"combat": 0, "elite": 1, "boss": 2}[node_type]
+	var rare_jokers: int = {"combat": 0, "elite": 1, "boss": 2, "fouille": 0}[node_type]
 	var jokers := Jokers.draw_choices(Run.rng, Run.jokers, rare_jokers, Profile.luck())
 	var relics_offered := []
 	for i in 3:
@@ -120,6 +121,8 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Run.biome()["colors"]["background"])
 
 	var title := "Niveau réussi ! Choisis une récompense"
+	if node_type == "fouille":
+		title = "Mission réussie ! Une relique rare t'attend" if Run.mission_ok else "Mission ratée... Choisis une récompense"
 	if node_type == "boss":
 		var boss_name: String = EnemyTypes.get_type(Run.biome()["boss"])["name"]
 		if Run.boss_killed:

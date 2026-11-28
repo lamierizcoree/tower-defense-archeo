@@ -12,6 +12,18 @@ const CODEX_BUTTON := Rect2(800, 20, 140, 34)
 
 var hovered := Vector2i(-1, -1)
 
+const SYMBOLS := {"combat": "⚔", "elite": "!", "boss": "☠", "fouille": "✦", "event": "?", "shop": "$", "camp": "▲"}
+const NAMES := {"event": "Événement", "shop": "Marchand ambulant", "camp": "Feu de camp"}
+const DESCRIPTIONS := {
+	"combat": "Combat",
+	"elite": "Élite : plus dur, récompense rare garantie",
+	"boss": "Boss : ce qui dormait au fond",
+	"fouille": "Fouille : combat avec une mission, relique rare si réussie",
+	"event": "Une rencontre ou une découverte, avec un choix",
+	"shop": "Dépense ton trésor : reliques, jokers, vies",
+	"camp": "Repos, fouille des environs ou tri des jokers",
+}
+
 
 func _ready() -> void:
 	if not Run.started:
@@ -86,7 +98,7 @@ func _draw() -> void:
 			draw_circle(pos, r, fill)
 			if key in reachable:
 				draw_arc(pos, r + 5, 0.0, TAU, 40, Color(1, 0.88, 0.4, 0.5 + 0.5 * pulse), 3.0)
-			var symbol: String = {"combat": "⚔", "elite": "!", "boss": "☠"}[n["type"]]
+			var symbol: String = SYMBOLS[n["type"]]
 			draw_string(font, pos + Vector2(-r, 8), symbol, HORIZONTAL_ALIGNMENT_CENTER, r * 2, 22, Color.WHITE)
 			if key in Run.visited:
 				draw_string(font, pos + Vector2(-r, r + 18), "fait", HORIZONTAL_ALIGNMENT_CENTER, r * 2, 12, Color(1, 1, 1, 0.5))
@@ -95,9 +107,9 @@ func _draw() -> void:
 	if hovered.x >= 0:
 		var n: Dictionary = Run.map[hovered.x][hovered.y]
 		var lines := [
-			Levels.get_layout(n["layout"])["name"],
-			{"combat": "Combat", "elite": "Élite : plus dur, récompense rare garantie", "boss": "Boss : ce qui dormait au fond"}[n["type"]],
-			"%d vagues" % Levels.WAVE_COUNT[n["type"]],
+			Levels.get_layout(n["layout"])["name"] if MapGen.is_fight(n["type"]) else NAMES[n["type"]],
+			DESCRIPTIONS[n["type"]],
+			("%d vagues" % Levels.WAVE_COUNT[n["type"]]) if MapGen.is_fight(n["type"]) else "Pas de combat",
 		]
 		var p := Vector2(Grid.SCREEN.x - 314, 560)  # coin en bas à droite, hors de la carte
 		draw_rect(Rect2(p, Vector2(290, 72)), Color(0, 0, 0, 0.45))
@@ -105,8 +117,8 @@ func _draw() -> void:
 			draw_string(font, p + Vector2(10, 22 + k * 20), lines[k], HORIZONTAL_ALIGNMENT_LEFT, 270, 15 if k == 0 else 13, Color.WHITE)
 
 	# Pied de page : état de l'expédition
-	var footer := "Vies %d    Score %d    Reliques %d/%d    Jokers (%d/%d) : %s" % [
-		Run.lives, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Profile.max_jokers(), _joker_names()]
+	var footer := "Vies %d    Trésor %d    Score %d    Reliques %d/%d    Jokers (%d/%d) : %s" % [
+		Run.lives, Run.treasure, Run.score, Run.relics.size(), Relics.MAX_HELD, Run.jokers.size(), Profile.max_jokers(), _joker_names()]
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 48), footer, HORIZONTAL_ALIGNMENT_LEFT, Grid.SCREEN.x - 360, 15, Color.WHITE)
 	draw_string(font, Vector2(24, Grid.SCREEN.y - 22), "Clique sur un niveau entouré pour avancer.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.55))
 
@@ -117,6 +129,14 @@ func _type_color(type: String) -> Color:
 			return Color("b8433a")
 		"boss":
 			return Color("7d3c98")
+		"fouille":
+			return Color("2e8c8c")
+		"event":
+			return Color("4f6fac")
+		"shop":
+			return Color("c9952e")
+		"camp":
+			return Color("4c8c4a")
 	return Color("8c7a5b")
 
 

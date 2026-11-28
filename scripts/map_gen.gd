@@ -2,13 +2,15 @@ class_name MapGen
 extends RefCounted
 ## Crée la carte à embranchements d'un biome.
 ## La carte est une liste d'étages. Chaque étage est une liste de nœuds :
-##   type   : "combat", "elite" ou "boss"
+##   type   : "combat", "elite", "boss", "fouille" (combat avec une mission),
+##            "event" (événement), "shop" (marchand) ou "camp" (feu de camp)
 ##   layout : identifiant du plan (voir levels.gd)
 ##   links  : index des nœuds de l'étage suivant auxquels ce nœud mène
 ##   pos    : hauteur du nœud à l'écran, entre 0 et 1
 
 const FLOORS := 5            # 4 étages de niveaux + le boss
-const ELITE_CHANCE := 0.35
+## Chances de chaque type de nœud aux étages du milieu (le reste est du combat).
+const NODE_CHANCES := {"elite": 0.28, "event": 0.16, "fouille": 0.1, "shop": 0.08, "camp": 0.06}
 
 
 static func generate(rng: RandomNumberGenerator, biome_index: int) -> Array:
@@ -24,14 +26,33 @@ static func generate(rng: RandomNumberGenerator, biome_index: int) -> Array:
 			var count := 2 if f == 0 else rng.randi_range(2, 3)
 			var layouts := _pick_layouts(rng, pool, previous_layouts, count, used)
 			for i in count:
-				var type := "combat"
-				if f > 0 and rng.randf() < ELITE_CHANCE:
-					type = "elite"
+				var type := "combat" if f == 0 else _roll_type(rng)
 				nodes.append(_node(type, layouts[i], (i + 0.5) / count))
+			# Juste avant le boss, au moins un marchand ou un feu de camp
+			if f == FLOORS - 2:
+				var has_rest := false
+				for n in nodes:
+					has_rest = has_rest or n["type"] in ["shop", "camp"]
+				if not has_rest:
+					nodes[rng.randi_range(0, nodes.size() - 1)]["type"] = "shop" if rng.randf() < 0.5 else "camp"
 			previous_layouts = layouts
 		floors.append(nodes)
 	_link(rng, floors)
 	return floors
+
+
+static func _roll_type(rng: RandomNumberGenerator) -> String:
+	var roll := rng.randf()
+	for type in NODE_CHANCES:
+		roll -= NODE_CHANCES[type]
+		if roll < 0.0:
+			return type
+	return "combat"
+
+
+## Vrai pour les nœuds où l'on se bat.
+static func is_fight(type: String) -> bool:
+	return type in ["combat", "elite", "boss", "fouille"]
 
 
 static func _node(type: String, layout: String, pos: float) -> Dictionary:

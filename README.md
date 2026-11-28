@@ -98,10 +98,18 @@ Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
 
 ## L'expédition
 
-1. **La carte** : on choisit son prochain niveau parmi ceux entourés. ⚔ = combat (2 vagues), ! = élite (3 vagues plus dures, une récompense rare garantie), ☠ = boss (3 vagues, le boss arrive à la dernière).
+1. **La carte** : on choisit sa prochaine étape parmi celles entourées. Le premier étage n'a que des combats, et l'étage juste avant le boss contient toujours un marchand ou un feu de camp.
+   - ⚔ combat : 2 vagues.
+   - ! élite : 3 vagues plus dures, une récompense rare garantie.
+   - ✦ fouille : 2 vagues avec une mission (aucune fuite, 4 tours maximum, ou 15 murs maximum). Mission réussie = une relique rare au moins.
+   - ? événement : une découverte avec un choix (sarcophage, inscription, puits, idole, caravane, carte). Certains choix sont risqués.
+   - $ marchand : 3 reliques, 2 jokers et une trousse de soins (+3 vies), payés en trésor.
+   - ▲ feu de camp : au choix, se reposer (+6 vies), fouiller les environs (+25 trésor) ou se défaire d'un joker.
+   - ☠ boss : 3 vagues, le boss arrive à la dernière.
 2. **Le niveau** : on repart d'une grille vide avec de l'or neuf. Les vies, elles, se gardent d'un niveau à l'autre.
 3. **La récompense** : 1 carte parmi 3 (joker ou relique), ou passer pour gagner 3 vies. On garde 5 jokers et 8 reliques au maximum : au-delà, il faut en abandonner un.
-4. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
+4. **Le trésor** : à la fin de chaque niveau, la moitié de l'or restant devient du trésor, qui se garde pour toute l'expédition. On le dépense chez le marchand et dans certains événements. Une relique ou un joker gagné sans place libre est revendu automatiquement en trésor.
+5. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
 
 ### Les biomes
 
