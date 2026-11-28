@@ -1,2 +1,5 @@
 # Dossier de cache créé automatiquement par Godot
 .godot/
+
+# Export web (voir tools/export_web.sh)
+build/

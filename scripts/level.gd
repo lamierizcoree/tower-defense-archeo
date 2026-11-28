@@ -10,6 +10,8 @@ extends Node2D
 ##   F            : vitesse x2
 ##   E            : tourner une tour qui porte la Lance du Pharaon (au survol)
 ##   Barre du bas  : cliquer une relique, puis une tour, pour l'y poser
+##   Boutons en haut à droite : lancer la vague, vitesse x2 (pour le tactile)
+##   Tactile : appui long = clic droit (voir touch.gd)
 
 const WALL_COST := 2
 const KILL_REWARD := 3
@@ -19,6 +21,8 @@ const DUNES_PER_WAVE := 4
 const STORM_RANGE := 0.75
 const MACON_RANGE := 12.0
 const WAVE_INFO_RECT := Rect2(6, 34, 614, 24)   # zone de la ligne « Prochaine vague » à survoler
+const WAVE_BUTTON := Rect2(846, 6, 106, 26)     # lancer la vague (comme Espace)
+const SPEED_BUTTON := Rect2(846, 36, 106, 22)   # vitesse x2 (comme F)
 
 var node: Dictionary
 var biome: Dictionary
@@ -87,7 +91,7 @@ func _ready() -> void:
 		gold += Jokers.MARCHANDS_GOLD
 	_shift_dunes()
 	_refresh_paths()
-	_say("Construis ton labyrinthe, puis Espace")
+	_say("Construis ton labyrinthe, puis lance la vague")
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	overlay = Node2D.new()
@@ -390,6 +394,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		var pos := get_global_mouse_position()
+		if event.button_index == MOUSE_BUTTON_LEFT and not towers.has(upgrade_cell):
+			if WAVE_BUTTON.has_point(pos):
+				_start_wave()
+				return
+			if SPEED_BUTTON.has_point(pos):
+				Engine.time_scale = 2.0 if Engine.time_scale == 1.0 else 1.0
+				return
 		# Menu d'amélioration ouvert : un clic choisit une option, ou ferme le menu
 		if towers.has(upgrade_cell):
 			var t: Tower = towers[upgrade_cell]
@@ -907,19 +918,23 @@ func _draw_hud(font: Font) -> void:
 
 	var line2 := ""
 	if not wave_running and wave_index < waves.size() - 1:
-		line2 = "Prochaine vague (Espace) : " + _describe_wave(wave_index + 1)
+		line2 = "Prochaine vague : " + _describe_wave(wave_index + 1)
 		if _is_storm(wave_index + 1):
 			line2 += "  ·  tempête"
 	elif wave_running:
 		line2 = "Restants : %d" % (spawn_queue.size() + enemies.size())
 	if line2 != "":
-		line2 += "   ⓘ"
+		line2 += "   (i)"
 		var hot := WAVE_INFO_RECT.has_point(get_global_mouse_position())
 		if hot:
 			draw_rect(WAVE_INFO_RECT, Color(1, 1, 1, 0.08))
 	draw_string(font, Vector2(12, 50), line2, HORIZONTAL_ALIGNMENT_LEFT, 600, 14, Color(1, 1, 1, 0.75))
 	if message_time > 0.0:
-		draw_string(font, Vector2(630, 50), message, HORIZONTAL_ALIGNMENT_LEFT, 320, 14, Color("ffe066"))
+		draw_string(font, Vector2(630, 50), message, HORIZONTAL_ALIGNMENT_LEFT, 210, 14, Color("ffe066"))
+	var mouse := get_global_mouse_position()
+	var can_start := not wave_running and wave_index < waves.size() - 1 and not ended
+	UI.button(self, WAVE_BUTTON, "Vague ▶", WAVE_BUTTON.has_point(mouse), can_start, 15)
+	UI.button(self, SPEED_BUTTON, "Vitesse x2" if Engine.time_scale == 1.0 else "Vitesse x1", SPEED_BUTTON.has_point(mouse), true, 12)
 
 
 func _describe_wave(index: int) -> String:
