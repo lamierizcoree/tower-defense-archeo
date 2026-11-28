@@ -72,6 +72,8 @@ func _ready() -> void:
 		gold = int(gold * Difficulty.START_GOLD)
 	if Run.has_joker("rempart"):
 		Run.lives += 2
+	if Run.has_family("marchands", 2):
+		gold += Jokers.MARCHANDS_GOLD
 	_shift_dunes()
 	_refresh_paths()
 	_say("Construis ton labyrinthe, puis Espace")
@@ -139,7 +141,7 @@ func _start_wave() -> void:
 	if Run.has_joker("detour"):
 		var bonus := 0
 		for p in path_previews:
-			bonus = maxi(bonus, p.size() / 3)
+			bonus = maxi(bonus, p.size() / (2 if Run.has_duo("cartographe") else 3))
 		gold += bonus
 		_say("Vague %d ! Long détour : +%d or" % [wave_index + 1, bonus])
 	else:
@@ -152,10 +154,14 @@ func _end_wave() -> void:
 	_update_seals()
 	if wave_index >= waves.size() - 1:
 		ended = true
-		Run.treasure += gold / 2
+		var kept := int(gold * (Jokers.MARCHANDS_TREASURE if Run.has_family("marchands", 3) else 0.5))
+		Run.treasure += kept
 		if Run.mission != "":
 			Run.mission_ok = _mission_ok()
-		var msg := "Niveau réussi ! +%d trésor" % (gold / 2)
+		var msg := "Niveau réussi ! +%d trésor" % kept
+		if leaks == 0 and Run.has_family("strateges", 3):
+			Run.lives += Jokers.STRATEGES_LIVES
+			msg += "  ·  Stratèges : +%d vies" % Jokers.STRATEGES_LIVES
 		if Run.mission != "":
 			msg += "  ·  mission " + ("réussie !" if Run.mission_ok else "ratée")
 		_say(msg, 99.0)
@@ -214,6 +220,7 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 	e.ice = ice
 	e.walls = walls
 	e.venin = Run.has_joker("venin")
+	e.alchemy = Run.has_family("alchimistes", 3)
 	if Difficulty.active("regen"):
 		e.regen = Difficulty.REGEN
 	e.died.connect(_on_enemy_died)
@@ -227,6 +234,8 @@ func _on_enemy_died(e: Enemy) -> void:
 	var reward: int = e.data.get("gold", KILL_REWARD) * (2 if e.elite else 1)
 	if Difficulty.active("maigre_butin"):
 		reward = maxi(1, reward - 1)
+	if (e.elite or e.is_boss()) and Run.has_duo("chasseur"):
+		reward += Jokers.CHASSEUR_GOLD
 	earn(reward + (2 if Run.has_joker("prime") else 0))
 	Run.score += e.data["score"] * (3 if e.elite else 1)
 	Run.kills += 1
@@ -237,9 +246,10 @@ func _on_enemy_died(e: Enemy) -> void:
 	_remove_enemy(e)
 	_split(e, where)
 	if was_poisoned and Run.has_joker("fiole"):
+		var powder := Run.has_duo("poudre")
 		for other in enemies.duplicate():
-			if is_instance_valid(other) and other.global_position.distance_to(where) <= 60.0:
-				other.take_damage(15.0)
+			if is_instance_valid(other) and other.global_position.distance_to(where) <= (90.0 if powder else 60.0):
+				other.take_damage(30.0 if powder else 15.0)
 
 
 func _on_enemy_reached_goal(e: Enemy) -> void:

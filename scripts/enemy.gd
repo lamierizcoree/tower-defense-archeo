@@ -24,6 +24,7 @@ var slow_time := 0.0
 var poison_dps := 0.0        # dégâts par seconde
 var poison_time := 0.0
 var venin := false           # joker « Venin glacé »
+var alchemy := false         # clan Alchimistes 3 : ralenti + empoisonné = +25 % de dégâts
 var hp_mult := 1.0           # multiplicateur de PV de la vague (sans le bonus d'élite)
 var elite := false           # difficulté « Élites errants » : plus de PV, coûte 1 vie de plus
 var acid := 0.0              # spécialisation Acide : dégâts subis en plus tant qu'il est empoisonné
@@ -116,6 +117,8 @@ func take_damage(amount: float) -> void:
 		return
 	if acid > 0.0 and poison_time > 0.0:
 		amount *= 1.0 + acid
+	if alchemy and poison_time > 0.0 and slow_time > 0.0:
+		amount *= 1.0 + Jokers.ALCHIMISTES_DAMAGE
 	hp -= amount
 	if hp <= 0.0:
 		dead = true

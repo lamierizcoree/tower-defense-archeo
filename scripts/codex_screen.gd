@@ -2,7 +2,7 @@ extends Node2D
 ## Le carnet de l'expédition : la liste de toutes les reliques et de tous les jokers (pouvoirs).
 ## Les reliques pas encore débloquées sont masquées, avec le rang qui les débloque.
 
-const TABS := ["Reliques", "Jokers"]
+const TABS := ["Reliques", "Jokers", "Synergies"]
 const BTN_BACK := Rect2(20, 20, 120, 34)
 const ROW_TOP := 120.0
 const ROW_H := 39.0
@@ -16,7 +16,7 @@ func _process(_delta: float) -> void:
 
 
 func _tab_rect(i: int) -> Rect2:
-	return Rect2(Vector2(330 + i * 155, 70), Vector2(145, 32))
+	return Rect2(Vector2((Grid.SCREEN.x - TABS.size() * 155 + 10) / 2.0 + i * 155, 70), Vector2(145, 32))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -53,8 +53,10 @@ func _draw() -> void:
 
 	if tab == 0:
 		_draw_relics(font)
-	else:
+	elif tab == 1:
 		_draw_jokers(font)
+	else:
+		_draw_synergies(font)
 
 
 var row_h := ROW_H
@@ -98,6 +100,31 @@ func _draw_jokers(font: Font) -> void:
 	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / ids.size())
 	for i in ids.size():
 		var j := Jokers.get_joker(ids[i])
-		_draw_row(font, i, Jokers.color_of(ids[i]), j["name"], Jokers.RARITY_NAMES[j["rarity"]], j["desc"])
+		var fam: Dictionary = Jokers.FAMILIES[j["family"]]
+		_draw_row(font, i, Jokers.color_of(ids[i]), "%s  %s" % [j["name"], fam["symbol"]], Jokers.RARITY_NAMES[j["rarity"]], j["desc"])
 	var foot := "Les jokers changent une règle du jeu pour toute l'expédition. Tu peux en garder %d." % Profile.max_jokers()
+	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))
+
+
+## Les clans de jokers (bonus à 2 et 3 jokers) et les duos.
+func _draw_synergies(font: Font) -> void:
+	var rows := []
+	for f in Jokers.FAMILIES:
+		var fam: Dictionary = Jokers.FAMILIES[f]
+		var members := []
+		for id in Jokers.DATA:
+			if Jokers.family_of(id) == f:
+				members.append(Jokers.get_joker(id)["name"])
+		rows.append([fam["color"], "%s %s" % [fam["symbol"], fam["name"]], "Clan", ", ".join(members)])
+		rows.append([fam["color"], "", "2 jokers", fam["bonus"][2]])
+		rows.append([fam["color"], "", "3 jokers", fam["bonus"][3]])
+	for d in Jokers.DUOS:
+		var duo: Dictionary = Jokers.DUOS[d]
+		var a: String = Jokers.get_joker(duo["jokers"][0])["name"]
+		var b: String = Jokers.get_joker(duo["jokers"][1])["name"]
+		rows.append([Color("ff9f6b"), "Duo " + duo["name"], "Duo", "%s + %s : %s" % [a, b, duo["desc"]]])
+	row_h = minf(ROW_H, (ROW_BOTTOM - ROW_TOP) / rows.size())
+	for i in rows.size():
+		_draw_row(font, i, rows[i][0], rows[i][1], rows[i][2], rows[i][3])
+	var foot := "Avoir plusieurs jokers d'un même clan, ou les deux jokers d'un duo, débloque un bonus en plus."
 	draw_string(font, Vector2(0, Grid.SCREEN.y - 18), foot, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.55))

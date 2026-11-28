@@ -69,6 +69,15 @@ func has_joker(id: String) -> bool:
 	return id in jokers
 
 
+## Clan de jokers au palier voulu (2 ou 3) ?
+func has_family(family: String, step: int) -> bool:
+	return Jokers.family_count(jokers, family) >= step
+
+
+func has_duo(duo: String) -> bool:
+	return Jokers.has_duo(jokers, duo)
+
+
 func current_node() -> Dictionary:
 	return map[current.x][current.y]
 

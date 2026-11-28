@@ -102,7 +102,10 @@ func _draw() -> void:
 				var j := Jokers.get_joker(item["id"])
 				title_txt = j["name"]
 				color = Jokers.color_of(item["id"])
-				label = "JOKER\n" + Jokers.RARITY_NAMES[j["rarity"]].to_upper()
+				label = "JOKER %s\n" % Jokers.FAMILIES[j["family"]]["symbol"] + Jokers.RARITY_NAMES[j["rarity"]].to_upper()
+				var unlock := Jokers.would_unlock(Run.jokers, item["id"])
+				if unlock != "" and not item["sold"]:
+					desc += "\n\nActive : " + unlock
 				desc = j["desc"]
 			"lives":
 				title_txt = "Trousse de soins"

@@ -169,6 +169,9 @@ func _draw() -> void:
 				bg = Color("3a2f45")
 			kind_label = "JOKER · " + Jokers.RARITY_NAMES[j["rarity"]].to_upper()
 			desc = j["desc"]
+			var partner := Jokers.partner_of(card["id"])
+			if partner != "":
+				desc += "\nDuo avec %s." % Jokers.get_joker(partner)["name"]
 		draw_rect(r, bg)
 		draw_rect(r, border, false, 4.0 if (hot or chosen) else 2.0)
 		if card["kind"] == "relic":
@@ -178,6 +181,17 @@ func _draw() -> void:
 		draw_string(font, r.position + Vector2(0, 50), card_name, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, title_size, Color.WHITE)
 		draw_string(font, r.position + Vector2(0, 78), kind_label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, border)
 		draw_multiline_string(font, r.position + Vector2(18, 122), desc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 36, 15, -1, Color(1, 1, 1, 0.85))
+		if card["kind"] == "joker":
+			var fam: Dictionary = Jokers.FAMILIES[Jokers.family_of(card["id"])]
+			var count := Jokers.family_count(Run.jokers, Jokers.family_of(card["id"]))
+			draw_string(font, r.position + Vector2(0, 100), "%s %s  (%d en main)" % [fam["symbol"], fam["name"], count], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, fam["color"])
+			var unlock := Jokers.would_unlock(Run.jokers, card["id"])
+			if unlock != "":
+				var band := Rect2(r.position + Vector2(10, r.size.y - 52), Vector2(r.size.x - 20, 42))
+				draw_rect(band, Color(1, 0.62, 0.42, 0.18))
+				draw_rect(band, Color("ff9f6b"), false, 1.5)
+				draw_string(font, band.position + Vector2(0, 16), "Active :", HORIZONTAL_ALIGNMENT_CENTER, band.size.x, 12, Color("ffcf9f"))
+				draw_string(font, band.position + Vector2(0, 34), unlock, HORIZONTAL_ALIGNMENT_CENTER, band.size.x, 13, Color("ffcf9f"))
 
 	var skip := _skip_rect()
 	draw_rect(skip, Color(1, 1, 1, 0.15 if skip.has_point(mouse) else 0.07))
@@ -193,10 +207,15 @@ func _draw() -> void:
 		if i < Run.jokers.size():
 			var j := Jokers.get_joker(Run.jokers[i])
 			draw_string(font, r.position + Vector2(0, 26), j["name"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Color.WHITE)
-			draw_string(font, r.position + Vector2(0, 48), Jokers.RARITY_NAMES[j["rarity"]].to_lower(), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 12, Jokers.color_of(Run.jokers[i]))
+			var fam: Dictionary = Jokers.FAMILIES[j["family"]]
+			draw_string(font, r.position + Vector2(0, 48), "%s · %s %s" % [Jokers.RARITY_NAMES[j["rarity"]].to_lower(), fam["symbol"], fam["name"]], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 12, Jokers.color_of(Run.jokers[i]))
 		else:
 			draw_string(font, r.position + Vector2(0, 38), "vide", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, Color(1, 1, 1, 0.3))
-	draw_string(font, Vector2(0, 612), "Tes jokers (%d/%d)" % [Run.jokers.size(), Profile.max_jokers()], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
+	var syn := Jokers.active_synergies(Run.jokers)
+	var held_txt := "Tes jokers (%d/%d)" % [Run.jokers.size(), Profile.max_jokers()]
+	if not syn.is_empty():
+		held_txt += "  ·  Synergies : " + ", ".join(syn)
+	draw_string(font, Vector2(0, 612), held_txt, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5) if syn.is_empty() else Color("ffcf9f"))
 
 	# Reliques déjà en main
 	for i in Relics.MAX_HELD:

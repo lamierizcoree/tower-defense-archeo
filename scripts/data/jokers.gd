@@ -24,50 +24,179 @@ const ARCHITECTE_TOWER := 1.5    # ... mais tours +50 %
 
 const DATA := {
 	# --- Communs ---
-	"macon": {"name": "Maçon", "rarity": "commun",
+	"macon": {"name": "Maçon", "rarity": "commun", "family": "batisseurs",
 		"desc": "Chaque mur ou rocher collé à une tour lui donne +12 de portée."},
-	"pillard": {"name": "Pillard", "rarity": "commun",
+	"pillard": {"name": "Pillard", "rarity": "commun", "family": "marchands",
 		"desc": "Chaque ennemi qui s'échappe vous rapporte 6 or."},
-	"briques": {"name": "Briques creuses", "rarity": "commun",
+	"briques": {"name": "Briques creuses", "rarity": "commun", "family": "batisseurs",
 		"desc": "Les murs ne coûtent plus que 1 or."},
-	"prime": {"name": "Prime de chasse", "rarity": "commun",
+	"prime": {"name": "Prime de chasse", "rarity": "commun", "family": "marchands",
 		"desc": "+2 or pour chaque ennemi tué."},
-	"fondations": {"name": "Fondations", "rarity": "commun",
+	"fondations": {"name": "Fondations", "rarity": "commun", "family": "batisseurs",
 		"desc": "Les tours coûtent 25 % moins cher."},
-	"rempart": {"name": "Rempart", "rarity": "commun",
+	"rempart": {"name": "Rempart", "rarity": "commun", "family": "strateges",
 		"desc": "+2 vies au début de chaque niveau."},
 	# --- Non communs ---
-	"butin": {"name": "Butin de fouille", "rarity": "non_commun",
+	"butin": {"name": "Butin de fouille", "rarity": "non_commun", "family": "marchands",
 		"desc": "+30 % d'or gagné pendant les vagues (ennemis tués et bonus de fin de vague)."},
-	"cul_de_sac": {"name": "Cul-de-sac", "rarity": "non_commun",
+	"cul_de_sac": {"name": "Cul-de-sac", "rarity": "non_commun", "family": "batisseurs",
 		"desc": "Une tour bloquée sur 3 côtés ou plus inflige double dégâts."},
-	"detour": {"name": "Long détour", "rarity": "non_commun",
+	"detour": {"name": "Long détour", "rarity": "non_commun", "family": "marchands",
 		"desc": "Au début de chaque vague, +1 or toutes les 3 cases du chemin."},
-	"givre_eternel": {"name": "Givre éternel", "rarity": "non_commun",
+	"givre_eternel": {"name": "Givre éternel", "rarity": "non_commun", "family": "alchimistes",
 		"desc": "Les ralentissements durent deux fois plus longtemps et sont plus forts."},
-	"venin": {"name": "Venin glacé", "rarity": "non_commun",
+	"venin": {"name": "Venin glacé", "rarity": "non_commun", "family": "alchimistes",
 		"desc": "Le poison fait double dégâts aux ennemis ralentis."},
-	"artilleur": {"name": "Artilleur", "rarity": "non_commun",
+	"artilleur": {"name": "Artilleur", "rarity": "non_commun", "family": "alchimistes",
 		"desc": "Les explosions du Mortier sont 50 % plus larges."},
-	"ancetres": {"name": "Totems ancestraux", "rarity": "non_commun",
+	"ancetres": {"name": "Totems ancestraux", "rarity": "non_commun", "family": "strateges",
 		"desc": "Les bonus de plusieurs Totems se cumulent."},
 	# --- Rares ---
-	"echo": {"name": "Écho", "rarity": "rare",
+	"echo": {"name": "Écho", "rarity": "rare", "family": "strateges",
 		"desc": "Les tirs d'Arbalète et de Baliste rebondissent sur un 2e ennemi (60 %)."},
-	"fiole": {"name": "Fiole instable", "rarity": "rare",
+	"fiole": {"name": "Fiole instable", "rarity": "rare", "family": "alchimistes",
 		"desc": "Un ennemi empoisonné qui meurt explose et blesse ses voisins."},
-	"sablier": {"name": "Sablier ancien", "rarity": "rare",
+	"sablier": {"name": "Sablier ancien", "rarity": "rare", "family": "alchimistes",
 		"desc": "Pendant la première vague de chaque niveau, les ennemis sont 30 % plus lents."},
-	"ecrin": {"name": "Écrin double", "rarity": "rare",
+	"ecrin": {"name": "Écrin double", "rarity": "rare", "family": "strateges",
 		"desc": "Chaque tour peut porter 2 reliques au lieu d'une (toujours une seule légendaire)."},
 	# --- Légendaires ---
-	"meute": {"name": "Esprit de meute", "rarity": "legendaire",
+	"meute": {"name": "Esprit de meute", "rarity": "legendaire", "family": "strateges",
 		"desc": "Chaque tour gagne +10 % de cadence par autre tour du même type posée (max +50 %)."},
-	"maudit": {"name": "Trésor maudit", "rarity": "legendaire",
+	"maudit": {"name": "Trésor maudit", "rarity": "legendaire", "family": "marchands",
 		"desc": "Tout l'or gagné pendant les vagues est doublé, mais les ennemis ont 25 % de PV en plus."},
-	"architecte": {"name": "Architecte fou", "rarity": "legendaire",
+	"architecte": {"name": "Architecte fou", "rarity": "legendaire", "family": "batisseurs",
 		"desc": "Les 20 premiers murs de chaque niveau sont gratuits, mais les tours coûtent 50 % plus cher."},
 }
+
+## --- Synergies -------------------------------------------------------------
+## Chaque joker appartient à un clan. Avoir 2 puis 3 jokers d'un même clan
+## donne un bonus en plus. Certaines paires précises forment un duo, avec un effet à part.
+const FAMILY_STEPS := [2, 3]
+const FAMILIES := {
+	"batisseurs": {"name": "Bâtisseurs", "symbol": "■", "color": Color("d9a066"),
+		"bonus": {2: "Toutes les tours ont +10 % de portée.",
+			3: "Chaque mur ou rocher collé à une tour lui donne +6 % de dégâts."}},
+	"marchands": {"name": "Marchands", "symbol": "$", "color": Color("ffd54a"),
+		"bonus": {2: "+15 or au début de chaque niveau.",
+			3: "Les trois quarts de l'or restant deviennent du trésor (au lieu de la moitié)."}},
+	"alchimistes": {"name": "Alchimistes", "symbol": "⚗", "color": Color("8fdc6a"),
+		"bonus": {2: "Les effets spéciaux (poison, ralentissement, explosions) sont 20 % plus forts.",
+			3: "Un ennemi à la fois ralenti et empoisonné subit +25 % de dégâts."}},
+	"strateges": {"name": "Stratèges", "symbol": "♜", "color": Color("8ab8ff"),
+		"bonus": {2: "Toutes les tours tirent 10 % plus vite.",
+			3: "Un niveau terminé sans aucune fuite rapporte +2 vies."}},
+}
+const BATISSEURS_RANGE := 0.1
+const BATISSEURS_WALL_DAMAGE := 0.06
+const MARCHANDS_GOLD := 15
+const MARCHANDS_TREASURE := 0.75
+const ALCHIMISTES_EFFECT := 0.2
+const ALCHIMISTES_DAMAGE := 0.25
+const STRATEGES_RATE := 0.1
+const STRATEGES_LIVES := 2
+
+const DUOS := {
+	"forteresse": {"name": "Forteresse", "jokers": ["macon", "cul_de_sac"],
+		"desc": "Une tour bloquée sur 3 côtés ou plus a aussi +25 % de portée."},
+	"cryotoxine": {"name": "Cryotoxine", "jokers": ["venin", "givre_eternel"],
+		"desc": "Le poison ralentit aussi les ennemis de 15 %."},
+	"poudre": {"name": "Poudre noire", "jokers": ["fiole", "artilleur"],
+		"desc": "L'explosion de la Fiole est 50 % plus large et fait double dégâts."},
+	"chasseur": {"name": "Chasseur de primes", "jokers": ["prime", "butin"],
+		"desc": "Les élites et les boss rapportent +10 or."},
+	"cartographe": {"name": "Cartographe", "jokers": ["detour", "sablier"],
+		"desc": "Long détour donne +1 or toutes les 2 cases au lieu de 3."},
+	"arsenal": {"name": "Arsenal", "jokers": ["echo", "meute"],
+		"desc": "Les rebonds d'Écho font 100 % des dégâts au lieu de 60 %."},
+}
+const FORTERESSE_RANGE := 1.25
+const CRYOTOXINE_SLOW := 0.85
+const CHASSEUR_GOLD := 10
+
+
+static func family_of(id: String) -> String:
+	return DATA[id]["family"]
+
+
+static func family_count(held: Array, family: String) -> int:
+	var n := 0
+	for id in held:
+		if DATA.has(id) and DATA[id]["family"] == family:
+			n += 1
+	return n
+
+
+## Palier atteint par un clan (0, 2 ou 3).
+static func family_level(held: Array, family: String) -> int:
+	var n := family_count(held, family)
+	var best := 0
+	for step in FAMILY_STEPS:
+		if n >= step:
+			best = step
+	return best
+
+
+static func has_duo(held: Array, duo: String) -> bool:
+	for id in DUOS[duo]["jokers"]:
+		if not id in held:
+			return false
+	return true
+
+
+## Le duo dont fait partie ce joker, ou "".
+static func duo_of(id: String) -> String:
+	for duo in DUOS:
+		if id in DUOS[duo]["jokers"]:
+			return duo
+	return ""
+
+
+## L'autre joker du duo de ce joker, ou "".
+static func partner_of(id: String) -> String:
+	var duo := duo_of(id)
+	if duo == "":
+		return ""
+	for other in DUOS[duo]["jokers"]:
+		if other != id:
+			return other
+	return ""
+
+
+## Les synergies actives, en texte court (pour les écrans).
+static func active_synergies(held: Array) -> Array[String]:
+	var out: Array[String] = []
+	for f in FAMILIES:
+		var lvl := family_level(held, f)
+		if lvl > 0:
+			out.append("%s %s (%d)" % [FAMILIES[f]["symbol"], FAMILIES[f]["name"], lvl])
+	for d in DUOS:
+		if has_duo(held, d):
+			out.append("Duo " + DUOS[d]["name"])
+	return out
+
+
+## Ce que prendre ce joker débloquerait avec la main actuelle (texte, ou "").
+static func would_unlock(held: Array, id: String) -> String:
+	if id in held:
+		return ""
+	var after := held.duplicate()
+	after.append(id)
+	var parts := []
+	var f := family_of(id)
+	var lvl := family_level(after, f)
+	if lvl > family_level(held, f):
+		parts.append("%s %s %d" % [FAMILIES[f]["symbol"], FAMILIES[f]["name"], lvl])
+	var duo := duo_of(id)
+	if duo != "" and has_duo(after, duo):
+		parts.append("Duo " + DUOS[duo]["name"])
+	return ", ".join(parts)
+
+
+## Description complète d'un clan.
+static func describe_family(family: String) -> String:
+	var f: Dictionary = FAMILIES[family]
+	return "%s — 2 : %s  3 : %s" % [f["name"], f["bonus"][2], f["bonus"][3]]
 
 
 static func get_joker(id: String) -> Dictionary:
