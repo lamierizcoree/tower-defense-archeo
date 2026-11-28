@@ -71,7 +71,7 @@ Pour régler ce rythme : `FIRST_POINT_COST`, `CHEAP_POINTS` et `COST_STEP` dans 
 | Rempart | +1 vie au départ de l'expédition |
 | Chance | Jokers et reliques plus rares. Chaque point rapproche les chances de leur maximum, atteint à 10 points : jokers 25 % commun, 50 % non commun, 20 % rare, 5 % légendaire ; reliques 22 / 50 / 20 / 8 % |
 | Préparation | 5 pts : une relique commune au départ ; 10 pts : un emplacement de joker en plus |
-| Forge | Arrivera avec la fusion des reliques |
+| Forge | -3 % sur le prix des fusions de reliques par point (-30 % à 10 points) |
 
 Le profil est sauvegardé automatiquement (fichier `profil.json` dans le dossier de données de Godot). Le bouton « Effacer le profil » du camp de base le remet à zéro.
 
@@ -154,6 +154,12 @@ Chaque tour porte **une seule relique**. Le joker rare **Écrin double** permet 
 | Légendaire | Cœur du Colosse gelé | Cadence x3, mais ne vise que les ennemis ralentis |
 
 Une seule légendaire par tour. Les « effets spéciaux » sont la durée du ralentissement, la force du poison, le rayon d'explosion et le bonus du Totem.
+
+#### La fusion de reliques
+
+Le bouton **Forge** de la carte permet de fusionner deux reliques de **même rareté** en une relique de la rareté au-dessus. Si les deux ont un bonus en commun (dégâts, cadence, portée, effets spéciaux), la nouvelle relique l'a aussi si possible. Deux rares donnent une légendaire. Les légendaires ne se fusionnent pas.
+
+Prix en trésor : 15 pour deux communes, 30 pour deux peu communes, 60 pour deux rares (moins avec l'amélioration Forge). Au feu de camp, l'option « Forger » offre une fusion gratuite.
 
 ### Les jokers
 

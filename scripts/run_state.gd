@@ -29,6 +29,7 @@ var new_unlocks: Array[String] = []   # reliques débloquées au dernier niveau 
 var points_gained := 0               # points d'amélioration gagnés à la fin de l'expédition
 var finished := false
 var codex_return := "res://scenes/hub.tscn"   # écran où revenir en quittant le carnet
+var forge_free := false             # fusion offerte par le feu de camp
 
 
 func new_run() -> void:

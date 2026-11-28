@@ -148,3 +148,70 @@ static func draw(rng: RandomNumberGenerator, min_rarity := "commun", luck := 0.0
 			return pool[rng.randi_range(0, pool.size() - 1)]
 		index -= 1
 	return "silex"
+
+
+# --- Fusion ------------------------------------------------------------------
+## Deux reliques de même rareté (pas légendaires) fusionnent en une relique de la rareté
+## au-dessus. Si elles ont un bonus en commun (dégâts, cadence...), le résultat l'a aussi
+## si possible. Deux rares donnent une légendaire. Le prix est payé en trésor.
+const FUSION_COST := {"commun": 15, "non_commun": 30, "rare": 60}
+const STAT_KEYS := ["damage", "rate", "range", "effect"]
+const STAT_NAMES := {"damage": "dégâts", "rate": "cadence", "range": "portée", "effect": "effets spéciaux"}
+
+
+## "" si la fusion est possible, sinon la raison.
+static func fusion_problem(a: String, b: String) -> String:
+	if DATA[a]["rarity"] != DATA[b]["rarity"]:
+		return "Il faut deux reliques de même rareté."
+	if is_legendary(a):
+		return "Les reliques légendaires ne se fusionnent pas."
+	return ""
+
+
+static func next_rarity(rarity: String) -> String:
+	return RARITIES[mini(RARITIES.find(rarity) + 1, RARITIES.size() - 1)]
+
+
+## Bonus communs aux deux reliques (sinon ceux de l'une ou l'autre).
+static func fusion_stats(a: String, b: String) -> Array:
+	var shared := []
+	var any := []
+	for k in STAT_KEYS:
+		if DATA[a].has(k) and DATA[b].has(k):
+			shared.append(k)
+		if DATA[a].has(k) or DATA[b].has(k):
+			any.append(k)
+	return shared if not shared.is_empty() else any
+
+
+## Texte qui annonce le résultat probable d'une fusion.
+static func fusion_preview(a: String, b: String) -> String:
+	var target := next_rarity(DATA[a]["rarity"])
+	if target == "legendaire":
+		return "Une relique légendaire au hasard."
+	var names := []
+	for k in fusion_stats(a, b):
+		names.append(STAT_NAMES[k])
+	return "Une relique %s, plutôt %s." % [RARITY_NAMES[target].to_lower(), " ou ".join(names)]
+
+
+## Résultat de la fusion de a et b (reliques débloquées seulement si unlocked est donné).
+static func fuse(rng: RandomNumberGenerator, a: String, b: String, unlocked: Callable = Callable()) -> String:
+	var target := next_rarity(DATA[a]["rarity"])
+	if target == "legendaire":
+		return draw_legendary(rng, unlocked if unlocked.is_valid() else func(_id): return true)
+	var stats := fusion_stats(a, b)
+	var best := []
+	var fallback := []
+	for id in DATA:
+		if DATA[id]["rarity"] != target or (unlocked.is_valid() and not unlocked.call(id)):
+			continue
+		fallback.append(id)
+		for k in stats:
+			if DATA[id].has(k):
+				best.append(id)
+				break
+	var pool := best if not best.is_empty() else fallback
+	if pool.is_empty():
+		return draw(rng, target, 0.0, unlocked, target)
+	return pool[rng.randi_range(0, pool.size() - 1)]

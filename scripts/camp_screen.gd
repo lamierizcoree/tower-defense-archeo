@@ -15,7 +15,7 @@ func _process(_delta: float) -> void:
 
 
 func _option_rect(i: int) -> Rect2:
-	return Rect2(Vector2((Grid.SCREEN.x - OPTION_W) / 2.0, 250 + i * 86), Vector2(OPTION_W, 70))
+	return Rect2(Vector2((Grid.SCREEN.x - OPTION_W) / 2.0, 200 + i * 76), Vector2(OPTION_W, 64))
 
 
 func _joker_rect(i: int) -> Rect2:
@@ -30,7 +30,17 @@ func _options() -> Array:
 		["Se reposer", "+%d vies" % REST_LIVES, true],
 		["Fouiller les environs", "+%d trésor" % SEARCH_TREASURE, true],
 		["Alléger le sac", "Retirer un joker pour faire de la place", not Run.jokers.is_empty()],
+		["Forger", "Une fusion de reliques offerte", _can_forge()],
 	]
+
+
+## Au moins deux reliques de même rareté (pas légendaires) ?
+func _can_forge() -> bool:
+	for i in Run.relics.size():
+		for j in range(i + 1, Run.relics.size()):
+			if Relics.fusion_problem(Run.relics[i], Run.relics[j]) == "":
+				return true
+	return false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -61,6 +71,9 @@ func _unhandled_input(event: InputEvent) -> void:
 					done = "Quelques babioles anciennes. +%d trésor." % SEARCH_TREASURE
 				2:
 					discarding = true
+				3:
+					Run.forge_free = true
+					get_tree().change_scene_to_file("res://scenes/forge.tscn")
 			return
 
 
