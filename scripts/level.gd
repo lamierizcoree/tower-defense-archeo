@@ -584,7 +584,7 @@ func _upgrade_origin(t: Tower) -> Vector2:
 	var p := t.global_position + Vector2(34, -30)
 	if p.x + UPGRADE_W > Grid.SCREEN.x - 6:
 		p.x = t.global_position.x - 34 - UPGRADE_W
-	p.y = clampf(p.y, Grid.OFFSET.y + 4, Grid.OFFSET.y + Grid.ROWS * Grid.CELL - 190)
+	p.y = clampf(p.y, Grid.OFFSET.y + 4, Grid.OFFSET.y + Grid.ROWS * Grid.CELL - 200)
 	return p
 
 
@@ -592,7 +592,7 @@ const UPGRADE_W := 380.0
 
 ## Boutons du menu : [rectangle, choix].
 func _upgrade_buttons(t: Tower) -> Array:
-	var o := _upgrade_origin(t) + Vector2(10, 44)
+	var o := _upgrade_origin(t) + Vector2(10, 56)
 	match t.tier:
 		1:
 			return [[Rect2(o, Vector2(UPGRADE_W - 20, 48)), "next"]]
@@ -604,18 +604,21 @@ func _upgrade_buttons(t: Tower) -> Array:
 func _draw_upgrade_menu(font: Font, t: Tower, mouse: Vector2) -> void:
 	var o := _upgrade_origin(t)
 	var buttons := _upgrade_buttons(t)
-	var h := 54.0 + (buttons.size() * 64.0 if t.tier < 3 else 34.0)
+	var h := 66.0 + (buttons.size() * 64.0 if t.tier < 3 else 34.0)
 	overlay.draw_rect(Rect2(o, Vector2(UPGRADE_W, h)), Color(0.08, 0.07, 0.06, 0.95))
 	overlay.draw_rect(Rect2(o, Vector2(UPGRADE_W, h)), Color("ffd54a"), false, 1.5)
 	var title := "%s  ·  niveau %d" % [t.data["name"], t.tier]
 	if t.spec != "":
 		title += "  ·  " + t.spec_data(t.spec)["name"]
-	overlay.draw_string(font, o + Vector2(10, 22), title, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 16, Color.WHITE)
+	# image de la tour concernée par l'amélioration
+	overlay.draw_rect(Rect2(o + Vector2(6, 5), Vector2(44, 44)), Color(1, 1, 1, 0.06))
+	TowerArt.draw_icon(overlay, t.type_id, o + Vector2(28, 27), 44.0)
+	overlay.draw_string(font, o + Vector2(58, 22), title, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 66, 16, Color.WHITE)
 	var cost := upgrade_cost(t)
 	var hint := "Améliorer (clic ailleurs pour fermer)" if t.tier == 1 else ("Choisis une spécialisation" if t.tier == 2 else "Niveau maximum")
-	overlay.draw_string(font, o + Vector2(10, 38), hint, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 12, Color(1, 1, 1, 0.55))
+	overlay.draw_string(font, o + Vector2(58, 40), hint, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 66, 12, Color(1, 1, 1, 0.55))
 	if t.tier == 3:
-		overlay.draw_string(font, o + Vector2(10, 64), t.spec_data(t.spec)["desc"], HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 13, Color("ffd54a"))
+		overlay.draw_string(font, o + Vector2(10, 76), t.spec_data(t.spec)["desc"], HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 13, Color("ffd54a"))
 		return
 	for b in buttons:
 		var r: Rect2 = b[0]
@@ -956,15 +959,24 @@ func _draw_build_bar(font: Font) -> void:
 		draw_rect(r, Color(1, 1, 1, 0.15) if active else Color(1, 1, 1, 0.05))
 		if active:
 			draw_rect(r, Color("ffe066"), false, 2.0)
-		draw_rect(Rect2(r.position + Vector2(6, 12), Vector2(16, 16)), color)
 		var text_color := Color.WHITE if gold >= cost else Color(1, 1, 1, 0.4)
-		draw_string(font, r.position + Vector2(28, 18), label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 34, 14, text_color)
+		if id == "":
+			# petit bloc de mur
+			var wr := Rect2(r.position + Vector2(5, 9), Vector2(26, 22))
+			draw_texture_rect_region(Art.WALL_TEXTURES.get(biome["id"], Art.WALL_TEXTURES["desert"]), Rect2(wr.position, Vector2(26, 16)), Rect2(0, 0, 52, 32))
+			draw_rect(Rect2(wr.position + Vector2(0, 16), Vector2(26, 6)), Art.WALL_PALETTES.get(biome["id"], Art.WALL_PALETTES["desert"])["front"])
+		else:
+			TowerArt.draw_icon(self, id, r.position + Vector2(18, 20), 34.0)
+			if gold < cost:
+				draw_rect(Rect2(r.position + Vector2(2, 2), Vector2(32, 36)), Color(0.1, 0.1, 0.1, 0.55))  # trop cher : grisé
+			draw_line(r.position + Vector2(6, 38), r.position + Vector2(30, 38), color, 2.0)
+		draw_string(font, r.position + Vector2(36, 18), label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 40, 14, text_color)
 		var price := "%d or" % cost
 		if id == "" and free_walls_left() > 0:
 			price = "gratuit (%d)" % free_walls_left()
 		if id == "" and Difficulty.active("carriere"):
 			price += "  ·  %d/%d" % [walls.size(), Difficulty.WALL_LIMIT]
-		draw_string(font, r.position + Vector2(28, 34), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
+		draw_string(font, r.position + Vector2(36, 34), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
 
 
 func _build_bar_rect(i: int) -> Rect2:

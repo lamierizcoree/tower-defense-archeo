@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Mortier vu de dessus, gueule vers la droite. Pivot au centre (32, 32). -->
+  <defs>
+    <linearGradient id="bronze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3c77a"/><stop offset="0.35" stop-color="#d39a45"/><stop offset="1" stop-color="#7a4f1c"/>
+    </linearGradient>
+    <radialGradient id="gueule" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000"/><stop offset="0.7" stop-color="#1c1712"/><stop offset="1" stop-color="#3a2b1a"/>
+    </radialGradient>
+    <linearGradient id="bois" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a5a32"/><stop offset="1" stop-color="#4e321c"/>
+    </linearGradient>
+    <linearGradient id="fer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9aa3ad"/><stop offset="1" stop-color="#3a3f46"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#2a1a0c" stroke-width="1.2" stroke-linejoin="round">
+    <ellipse cx="34" cy="36" rx="20" ry="9" fill="#000" fill-opacity="0.2" stroke="none"/>
+    <!-- affût en bois -->
+    <rect x="16" y="14" width="26" height="7" rx="2" fill="url(#bois)"/>
+    <rect x="16" y="43" width="26" height="7" rx="2" fill="url(#bois)"/>
+    <!-- tourillons -->
+    <rect x="27" y="18" width="6" height="5" fill="url(#fer)"/><rect x="27" y="41" width="6" height="5" fill="url(#fer)"/>
+    <!-- fût trapu qui s'évase -->
+    <path d="M14 23 Q12 32 14 41 L42 44 Q47 32 42 20 Z" fill="url(#bronze)"/>
+    <path d="M16 24.5 L41 22" stroke="#ffe6a8" stroke-width="1" opacity="0.8"/>
+    <!-- frettes -->
+    <path d="M22 22.2 Q20 32 22 41.8 M34 21 Q32 32 34 43" fill="none" stroke="#6b4318" stroke-width="1.6"/>
+    <!-- culasse ronde -->
+    <circle cx="13" cy="32" r="5" fill="url(#bronze)"/>
+    <!-- gueule -->
+    <ellipse cx="44" cy="32" rx="6" ry="13" fill="url(#bronze)"/>
+    <ellipse cx="44.5" cy="32" rx="4" ry="9.5" fill="url(#gueule)"/>
+    <path d="M41 21.5 Q39.5 26 40 30" stroke="#fff0c0" stroke-width="1" fill="none" opacity="0.8"/>
+  </g>
+</svg>

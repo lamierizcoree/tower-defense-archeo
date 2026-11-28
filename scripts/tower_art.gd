@@ -12,18 +12,28 @@ const IRON := Color("4a4f57")
 const BRASS := Color("c99a3c")
 const COPPER := Color("b8673a")
 
-## Sprites dessinés (art/sources/*.svg, rendus en PNG 2x). Les tours sans sprite
-## sont encore dessinées par code.
+## Sprites dessinés (art/sources/*.svg, rendus en PNG 2x dans art/sprites).
+## base : socle fixe. top : arme ou ornement. rotates : l'arme pivote vers la cible.
+## offset : position du haut par rapport au centre de la case. Les tailles sont en pixels de jeu.
 const SPRITES := {
-	"arbalete": {"base": preload("res://art/sprites/arbalete_socle.png"),
-		"weapon": preload("res://art/sprites/arbalete_arme.png"), "base_scale": 0.8, "weapon_scale": 0.72},
+	"arbalete": {"base": preload("res://art/sprites/arbalete_socle.png"), "base_size": 51.0,
+		"top": preload("res://art/sprites/arbalete_arme.png"), "top_size": 46.0, "rotates": true, "offset": Vector2(0, -7)},
+	"baliste": {"base": preload("res://art/sprites/baliste_socle.png"), "base_size": 54.0,
+		"top": preload("res://art/sprites/baliste_arme.png"), "top_size": 52.0, "rotates": true, "offset": Vector2(0, -8)},
+	"mortier": {"base": preload("res://art/sprites/mortier_socle.png"), "base_size": 52.0,
+		"top": preload("res://art/sprites/mortier_arme.png"), "top_size": 40.0, "rotates": true, "offset": Vector2(0, -8)},
+	"givre": {"base": preload("res://art/sprites/givre_socle.png"), "base_size": 50.0,
+		"top": preload("res://art/sprites/givre_cristal.png"), "top_size": 40.0, "offset": Vector2(0, -12), "bob": 2.0},
+	"alambic": {"base": preload("res://art/sprites/alambic_socle.png"), "base_size": 50.0,
+		"top": preload("res://art/sprites/alambic_cuve.png"), "top_size": 42.0, "offset": Vector2(0, -10)},
+	"totem": {"top": preload("res://art/sprites/totem.png"), "top_size": 54.0, "offset": Vector2(0, -6)},
 }
 
 
 static func draw(c: CanvasItem, type_id: String, accent: Color, aim: float, kick: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	if SPRITES.has(type_id):
-		_draw_sprites(c, SPRITES[type_id], aim, kick)  # l'ombre est dans le sprite du socle
+		_draw_sprites(c, type_id, aim, kick)  # l'ombre est dans le sprite du socle
 		return
 	# Ombre portée au sol
 	c.draw_colored_polygon(Art.ellipse(Vector2(4, 12), Vector2(18, 8)), Color(0, 0, 0, 0.28))
@@ -49,15 +59,49 @@ static func draw(c: CanvasItem, type_id: String, accent: Color, aim: float, kick
 			c.draw_circle(Vector2.ZERO, 14.0, accent)
 
 
-## Tour en sprites : le socle fixe, puis l'arme qui pivote vers la cible et recule au tir.
-static func _draw_sprites(c: CanvasItem, sp: Dictionary, aim: float, kick: float) -> void:
-	var bs: float = sp["base_scale"]
-	c.draw_texture_rect(sp["base"], Rect2(Vector2(-32, -32) * bs, Vector2(64, 64) * bs), false)
-	var ws: float = sp["weapon_scale"]
-	var recoil := -Vector2.from_angle(aim) * kick * 3.0
-	c.draw_set_transform(Vector2(0, -7) + recoil, aim, Vector2(ws, ws))
-	c.draw_texture_rect(sp["weapon"], Rect2(-32, -32, 64, 64), false)
+## Tour en sprites : le socle fixe, puis le haut, qui pivote vers la cible et recule au tir.
+## origin et k permettent de dessiner la même tour en petit (icônes des menus).
+static func _draw_sprites(c: CanvasItem, type_id: String, aim: float, kick: float, origin := Vector2.ZERO, k := 1.0) -> void:
+	var sp: Dictionary = SPRITES[type_id]
+	var t := Time.get_ticks_msec() / 1000.0
+	if sp.has("base"):
+		var bs: float = sp["base_size"] * k
+		c.draw_texture_rect(sp["base"], Rect2(origin - Vector2(bs, bs) / 2.0, Vector2(bs, bs)), false)
+	var ts: float = sp["top_size"]
+	var pos: Vector2 = origin + sp["offset"] * k
+	if sp.has("bob"):
+		pos.y += sin(t * 2.2) * float(sp["bob"]) * k
+	var angle := 0.0
+	if sp.get("rotates", false):
+		angle = aim
+		pos -= Vector2.from_angle(aim) * kick * 3.0 * k
+	c.draw_set_transform(pos, angle, Vector2(k, k))
+	c.draw_texture_rect(sp["top"], Rect2(-ts / 2.0, -ts / 2.0, ts, ts), false)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if k < 1.0:
+		return  # pas d'animation sur les icônes
+	match type_id:
+		"mortier":
+			if kick > 0.0:
+				var mouth := pos + Vector2.from_angle(aim) * 12.0
+				c.draw_circle(mouth, 7.0, Color(1.0, 0.7, 0.2, 0.7 * kick))
+				for i in 3:
+					c.draw_circle(mouth + Vector2(-6 + i * 6, -6 - i * 3) * (1.6 - kick), 5.0 + i, Color(0.85, 0.82, 0.78, 0.55 * kick))
+		"alambic":
+			for i in 2:
+				var phase := fmod(t * 0.7 + i * 0.5, 1.0)
+				c.draw_circle(pos + Vector2(10 + phase * 4, -16 - phase * 10), 2.5 + phase * 3.0, Color(0.55, 0.85, 0.35, 0.45 * (1.0 - phase)))
+		"givre":
+			for i in 3:
+				var a := t * 1.5 + i * TAU / 3.0
+				c.draw_circle(pos + Vector2(cos(a) * 15.0, 4 + sin(a) * 6.0), 1.5, Color(1, 1, 1, 0.8))
+
+
+## Icône d'une tour (barre de construction, menu d'amélioration) : size = hauteur voulue.
+static func draw_icon(c: CanvasItem, type_id: String, center: Vector2, size: float) -> void:
+	if not SPRITES.has(type_id):
+		return
+	_draw_sprites(c, type_id, -PI / 4, 0.0, center + Vector2(0, size * 0.08), size / 54.0)
 
 
 # --- Socles ------------------------------------------------------------------

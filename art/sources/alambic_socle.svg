@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Socle de tour vu de trois quarts : un cylindre de pierre. Le centre de la case est (32, 32). -->
+  <defs>
+    <linearGradient id="cote" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b7d6b"/>
+      <stop offset="0.35" stop-color="#776a59"/>
+      <stop offset="1" stop-color="#4d4338"/>
+    </linearGradient>
+    <radialGradient id="dessus" cx="0.38" cy="0.32" r="0.8">
+      <stop offset="0" stop-color="#d8ccb8"/>
+      <stop offset="0.6" stop-color="#ad9f89"/>
+      <stop offset="1" stop-color="#8c7f6c"/>
+    </radialGradient>
+    <linearGradient id="tissu" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8fd16a"/>
+      <stop offset="1" stop-color="#4c8a32"/>
+    </linearGradient>
+  </defs>
+  <!-- ombre au sol -->
+  <ellipse cx="35" cy="46" rx="22" ry="8" fill="#000" fill-opacity="0.28"/>
+  <g stroke="#2b1f14" stroke-width="1.2" stroke-linejoin="round">
+    <!-- côté du cylindre -->
+    <path d="M10 32 L10 41 A22 12 0 0 0 54 41 L54 32 Z" fill="url(#cote)"/>
+    <!-- joints des pierres sur le côté -->
+    <path d="M19 42 L19 50 M32 44 L32 53 M45 42 L45 50 M12 36 L52 36" stroke="#3b3229" stroke-width="0.8" fill="none" opacity="0.7"/>
+    <!-- bandeau de tissu aux couleurs de la tour -->
+    <path d="M10 37 A22 12 0 0 0 54 37 L54 40 A22 12 0 0 1 10 40 Z" fill="url(#tissu)" stroke-width="0.8"/>
+    <!-- dessus : dalle ronde -->
+    <ellipse cx="32" cy="32" rx="22" ry="12" fill="url(#dessus)"/>
+    <!-- dalles et joints -->
+    <ellipse cx="32" cy="32" rx="12" ry="6.5" fill="none" stroke="#6f6353" stroke-width="0.8"/>
+    <path d="M32 20 L32 25.5 M32 38.5 L32 44 M10.5 32 L20 32 M44 32 L53.5 32 M16 23.5 L23.5 27.4 M48 23.5 L40.5 27.4 M16 40.5 L23.5 36.6 M48 40.5 L40.5 36.6" stroke="#6f6353" stroke-width="0.8" fill="none"/>
+    <!-- usure et petits cailloux -->
+    <circle cx="22" cy="29" r="0.9" fill="#6f6353" stroke="none"/>
+    <circle cx="43" cy="36" r="1.1" fill="#6f6353" stroke="none"/>
+    <path d="M38 24 l2 1.5 l-1 2" stroke="#6f6353" stroke-width="0.6" fill="none"/>
+    <!-- reflet de lumière en haut à gauche -->
+    <path d="M13 29 A22 12 0 0 1 30 20.2" stroke="#fff" stroke-opacity="0.45" stroke-width="1.4" fill="none"/>
+  </g>
+</svg>

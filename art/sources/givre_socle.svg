@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Socle hexagonal du Givre, pierre givrée. Centre de la case : (32, 32). -->
+  <defs>
+    <linearGradient id="cote" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7d93a3"/><stop offset="1" stop-color="#46586a"/>
+    </linearGradient>
+    <radialGradient id="dessus" cx="0.4" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#eef7fc"/><stop offset="0.6" stop-color="#b9d3e2"/><stop offset="1" stop-color="#8eaabd"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="35" cy="45" rx="21" ry="8" fill="#000" fill-opacity="0.25"/>
+  <g stroke="#1f2c38" stroke-width="1.2" stroke-linejoin="round">
+    <path d="M11 32 L21 24.5 L43 24.5 L53 32 L53 40 L43 47.5 L21 47.5 L11 40 Z" fill="url(#cote)"/>
+    <path d="M21 39.5 V47.5 M43 39.5 V47.5" stroke="#2f3f4f" stroke-width="0.8"/>
+    <path d="M11 32 L21 24.5 L43 24.5 L53 32 L43 39.5 L21 39.5 Z" fill="url(#dessus)"/>
+    <path d="M18 32 L24 27.5 L40 27.5 L46 32 L40 36.5 L24 36.5 Z" fill="none" stroke="#7fd6e8" stroke-width="1.4"/>
+    <path d="M13 31 L21 25.5 L33 25.5" stroke="#fff" stroke-opacity="0.7" stroke-width="1.2" fill="none"/>
+    <!-- givre qui coule sur le bord -->
+    <path d="M24 39.5 l1 4 l1.5 -4 M33 39.5 l1 3 l1 -3 M40 39.5 l1 5 l1.2 -5" fill="#eef7fc" stroke="#9cc4da" stroke-width="0.6"/>
+  </g>
+</svg>

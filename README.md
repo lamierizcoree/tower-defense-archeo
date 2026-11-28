@@ -240,7 +240,7 @@ Revendre une tour rend la moitié de tout ce qu'elle a coûté (pose et amélior
 
 ## Les sprites
 
-Une partie des graphismes est faite de sprites dessinés en vectoriel : les sources sont dans `art/sources/*.svg` et les images utilisées par le jeu dans `art/sprites/*.png` (rendues en taille double pour rester nettes). Pour l'instant : l'Arbalète (socle et arme qui pivote) et le dessus des murs (désert et glace). Le reste est encore dessiné par code dans `scripts/art.gd` et `scripts/tower_art.gd`.
+Une partie des graphismes est faite de sprites dessinés en vectoriel : les sources sont dans `art/sources/*.svg` et les images utilisées par le jeu dans `art/sprites/*.png` (rendues en taille double pour rester nettes). Les 6 tours (socle, et arme qui pivote pour l'Arbalète, la Baliste et le Mortier) et le dessus des murs (désert et glace) sont en sprites ; ils servent aussi d'icônes dans la barre de construction et le menu d'amélioration. Le reste est dessiné par code dans `scripts/art.gd` et `scripts/tower_art.gd`.
 
 Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur vectoriel), puis l'exporter en PNG à 200 % dans `art/sprites/` avec le même nom, ou lancer `node tools/render_svg.js art/sources art/sprites`.
 
