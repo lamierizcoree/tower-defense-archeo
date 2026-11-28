@@ -49,6 +49,7 @@ var storm := false
 var gold := 0
 var gold_rest := 0.0   # morceaux d'or pas encore entiers (voir earn)
 var wall_paid := {}    # Vector2i -> or payé pour ce mur (rendu s'il est retiré)
+var upgrade_cell := Vector2i(-1, -1)  # tour dont le menu d'amélioration est ouvert
 var free_walls_used := 0  # murs gratuits déjà posés (joker Architecte fou)
 var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
 var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
@@ -314,6 +315,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					_rotate_line(towers[hover])
 			KEY_SPACE:
 				_start_wave()
+			KEY_U:
+				var hover_u := Grid.world_to_cell(get_global_mouse_position())
+				if towers.has(hover_u):
+					upgrade_cell = hover_u
+			KEY_ESCAPE:
+				upgrade_cell = Vector2i(-1, -1)
 			KEY_F:
 				Engine.time_scale = 2.0 if Engine.time_scale == 1.0 else 1.0
 		for id in TowerTypes.ORDER:
@@ -326,6 +333,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		var pos := get_global_mouse_position()
+		# Menu d'amélioration ouvert : un clic choisit une option, ou ferme le menu
+		if towers.has(upgrade_cell):
+			var t: Tower = towers[upgrade_cell]
+			for b in _upgrade_buttons(t):
+				if b[0].has_point(pos) and event.button_index == MOUSE_BUTTON_LEFT:
+					_try_upgrade(t, b[1])
+					return
+			upgrade_cell = Vector2i(-1, -1)
+			return
 		var bar_slot := _build_bar_slot(pos)
 		if bar_slot >= 0:
 			selected = "" if bar_slot == 0 else TowerTypes.ORDER[bar_slot - 1]
@@ -341,6 +357,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if selected_relic >= 0:
 				_try_socket(cell, selected_relic)
+			elif towers.has(cell):
+				upgrade_cell = cell  # clic sur une tour : menu d'amélioration
 			elif selected == "":
 				_try_place_wall(cell)
 			else:
@@ -447,12 +465,106 @@ func _try_place_tower(cell: Vector2i, id: String) -> void:
 	towers[cell] = t
 	add_child(t)
 	gold -= cost
+	t.spent = cost
+
+
+# --- Amélioration des tours --------------------------------------------------
+
+## Prix de la prochaine amélioration d'une tour (-1 si elle est au maximum).
+func upgrade_cost(t: Tower) -> int:
+	match t.tier:
+		1:
+			return int(ceil(tower_cost(t.type_id) * TowerTypes.TIER2_COST))
+		2:
+			return int(ceil(tower_cost(t.type_id) * TowerTypes.TIER3_COST))
+	return -1
+
+
+## Améliore une tour. which = "next" pour le niveau 2, "a" ou "b" pour la spécialisation.
+func _try_upgrade(t: Tower, which: String) -> void:
+	var cost := upgrade_cost(t)
+	if cost < 0:
+		return
+	if gold < cost:
+		_say("Pas assez d'or (%d)" % cost)
+		return
+	gold -= cost
+	t.spent += cost
+	t.tier += 1
+	if t.tier == 3:
+		t.spec = which
+		_say("%s : %s !" % [t.data["name"], t.spec_data(which)["name"]])
+	else:
+		_say("%s niveau %d" % [t.data["name"], t.tier])
+	upgrade_cell = Vector2i(-1, -1)
+	_update_seals()  # la portée a pu changer
+
+
+## Position du menu d'amélioration, à côté de la tour.
+func _upgrade_origin(t: Tower) -> Vector2:
+	var p := t.global_position + Vector2(34, -30)
+	if p.x + UPGRADE_W > Grid.SCREEN.x - 6:
+		p.x = t.global_position.x - 34 - UPGRADE_W
+	p.y = clampf(p.y, Grid.OFFSET.y + 4, Grid.OFFSET.y + Grid.ROWS * Grid.CELL - 190)
+	return p
+
+
+const UPGRADE_W := 380.0
+
+## Boutons du menu : [rectangle, choix].
+func _upgrade_buttons(t: Tower) -> Array:
+	var o := _upgrade_origin(t) + Vector2(10, 44)
+	match t.tier:
+		1:
+			return [[Rect2(o, Vector2(UPGRADE_W - 20, 48)), "next"]]
+		2:
+			return [[Rect2(o, Vector2(UPGRADE_W - 20, 56)), "a"], [Rect2(o + Vector2(0, 64), Vector2(UPGRADE_W - 20, 56)), "b"]]
+	return []
+
+
+func _draw_upgrade_menu(font: Font, t: Tower, mouse: Vector2) -> void:
+	var o := _upgrade_origin(t)
+	var buttons := _upgrade_buttons(t)
+	var h := 54.0 + (buttons.size() * 64.0 if t.tier < 3 else 34.0)
+	overlay.draw_rect(Rect2(o, Vector2(UPGRADE_W, h)), Color(0.08, 0.07, 0.06, 0.95))
+	overlay.draw_rect(Rect2(o, Vector2(UPGRADE_W, h)), Color("ffd54a"), false, 1.5)
+	var title := "%s  ·  niveau %d" % [t.data["name"], t.tier]
+	if t.spec != "":
+		title += "  ·  " + t.spec_data(t.spec)["name"]
+	overlay.draw_string(font, o + Vector2(10, 22), title, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 16, Color.WHITE)
+	var cost := upgrade_cost(t)
+	var hint := "Améliorer (clic ailleurs pour fermer)" if t.tier == 1 else ("Choisis une spécialisation" if t.tier == 2 else "Niveau maximum")
+	overlay.draw_string(font, o + Vector2(10, 38), hint, HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 12, Color(1, 1, 1, 0.55))
+	if t.tier == 3:
+		overlay.draw_string(font, o + Vector2(10, 64), t.spec_data(t.spec)["desc"], HORIZONTAL_ALIGNMENT_LEFT, UPGRADE_W - 20, 13, Color("ffd54a"))
+		return
+	for b in buttons:
+		var r: Rect2 = b[0]
+		var hot := r.has_point(mouse)
+		var ok := gold >= cost
+		overlay.draw_rect(r, Color(1, 1, 1, 0.16 if hot and ok else 0.07))
+		overlay.draw_rect(r, Color("ffd54a") if hot and ok else Color(1, 1, 1, 0.25), false, 1.5)
+		var label: String
+		var desc: String
+		if b[1] == "next":
+			label = "Niveau 2"
+			desc = "Dégâts et effets +%d %%, portée +%d %%" % [roundi((TowerTypes.TIER2_POWER - 1.0) * 100), roundi((TowerTypes.TIER2_RANGE - 1.0) * 100)]
+		else:
+			var sd := t.spec_data(b[1])
+			label = "Voie %s : %s" % [String(b[1]).to_upper(), sd["name"]]
+			desc = sd["desc"]
+		var col := Color.WHITE if ok else Color(1, 1, 1, 0.4)
+		overlay.draw_string(font, r.position + Vector2(10, 20), label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 90, 14, col)
+		overlay.draw_string(font, r.position + Vector2(r.size.x - 80, 20), "%d or" % cost, HORIZONTAL_ALIGNMENT_RIGHT, 70, 14, Color("ffe066") if ok else Color(1, 0.5, 0.4))
+		overlay.draw_multiline_string(font, r.position + Vector2(10, 38), desc, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 20, 12, 2, Color(1, 1, 1, 0.7 if ok else 0.4))
 
 
 func _remove_at(cell: Vector2i) -> void:
 	if towers.has(cell):
 		var t: Tower = towers[cell]
-		gold += tower_cost(t.type_id) / 2  # on récupère la moitié du prix ; les reliques reviennent dans l'inventaire
+		gold += t.spent / 2  # on récupère la moitié de ce qu'elle a coûté ; les reliques reviennent dans l'inventaire
+		if upgrade_cell == cell:
+			upgrade_cell = Vector2i(-1, -1)
 		t.queue_free()
 		towers.erase(cell)
 		_update_seals()
@@ -838,6 +950,11 @@ func _draw_overlay() -> void:
 	var mouse := get_global_mouse_position()
 	var font := ThemeDB.fallback_font
 
+	# Menu d'amélioration d'une tour
+	if towers.has(upgrade_cell):
+		_draw_upgrade_menu(font, towers[upgrade_cell], mouse)
+		return
+
 	# Détail de la vague à venir (ou en cours)
 	if WAVE_INFO_RECT.has_point(mouse):
 		var index := wave_index if wave_running else wave_index + 1
@@ -878,7 +995,13 @@ func _line(text: String, size := 13, color := Color(1, 1, 1, 0.85)) -> Array:
 
 func _tower_panel(id: String, t: Tower) -> Array:
 	var d := TowerTypes.get_type(id)
-	var lines := [_line(d["name"], 17, Color.WHITE), _line(d["desc"], 13, Color(1, 1, 1, 0.6))]
+	var head: String = d["name"]
+	if t and t.tier > 1:
+		head += "  ·  niveau %d" % t.tier
+	var lines := [_line(head, 17, Color.WHITE), _line(d["desc"], 13, Color(1, 1, 1, 0.6))]
+	if t and t.spec != "":
+		var sd := t.spec_data(t.spec)
+		lines.append(_line("%s : %s" % [sd["name"], sd["desc"]], 13, Color("ffd54a")))
 	var cell: Vector2i = t.cell if t else Vector2i(-10, -10)
 	var line_mode: bool = t != null and t.is_line()
 	var effect: float = t.effect_mult() if t else 1.0
@@ -936,7 +1059,9 @@ func _tower_panel(id: String, t: Tower) -> Array:
 		for rid in t.relic_ids():
 			var r := Relics.get_relic(rid)
 			lines.append(_line("  • %s : %s" % [r["name"], _short_relic(rid)], 13, Relics.RARITY_COLORS[r["rarity"]]))
-		lines.append(_line("Revente (clic droit) : %d or" % (tower_cost(id) / 2), 13, Color(1, 1, 1, 0.6)))
+		if t.tier < 3:
+			lines.append(_line("Clic ou U : améliorer (%d or)" % upgrade_cost(t), 13, Color("ffe066")))
+		lines.append(_line("Revente (clic droit) : %d or" % (t.spent / 2), 13, Color(1, 1, 1, 0.6)))
 	else:
 		lines.append(_line("Reliques : %d (une seule légendaire)" % (2 if Run.has_joker("ecrin") else 1)))
 		lines.append(_line("Prix : %d or  ·  se pose sur un mur" % tower_cost(id), 13, Color("ffe066")))

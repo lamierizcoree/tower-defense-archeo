@@ -10,6 +10,9 @@ var level: Node            # le niveau (level.gd)
 var cooldown := 0.0
 var relics: Array[int] = []    # index des reliques de Run.relics posées dans cette tour
 var line_dir := Vector2i.RIGHT # direction de tir avec la Lance du Pharaon
+var tier := 1                  # niveau de la tour : 1, 2 ou 3
+var spec := ""                 # spécialisation choisie au niveau 3 : "a" ou "b"
+var spent := 0                 # or dépensé (pose + améliorations), la moitié est rendue à la revente
 
 # Effets visuels du dernier tir
 var shot_target := Vector2.ZERO
@@ -28,6 +31,35 @@ func setup(id: String, lvl: Node, at: Vector2i) -> void:
 	level = lvl
 	cell = at
 	position = Grid.cell_to_world(at)
+
+
+# --- Niveaux et spécialisations ---------------------------------------------
+
+## Valeur d'une option de la spécialisation choisie, ou default.
+func spec_val(key: String, default: Variant = null) -> Variant:
+	if spec == "":
+		return default
+	return data["specs"][spec].get(key, default)
+
+
+func spec_data(which: String) -> Dictionary:
+	return data["specs"][which]
+
+
+## Bonus du niveau 2 (et 3) sur les dégâts et les effets.
+func tier_power() -> float:
+	return TowerTypes.TIER2_POWER if tier >= 2 else 1.0
+
+
+## Totem de rage : bonus de dégâts donné par les totems voisins spécialisés.
+func rage_bonus() -> float:
+	var bonus := 0.0
+	for t in level.towers.values():
+		if t == self or not is_instance_valid(t) or t.data["attack"] != "support":
+			continue
+		if t.spec_val("rage", 0.0) > 0.0 and global_position.distance_to(t.global_position) <= t.range_px():
+			bonus = maxf(bonus, t.spec_val("rage", 0.0))
+	return bonus
 
 
 # --- Reliques ----------------------------------------------------------------
@@ -80,7 +112,7 @@ func line_cells() -> int:
 
 ## Multiplicateur des effets spéciaux (ralentissement, poison, explosion, totem).
 func effect_mult() -> float:
-	return 1.0 + relic_bonus("effect")
+	return (1.0 + relic_bonus("effect")) * tier_power()
 
 
 # --- Statistiques ------------------------------------------------------------
@@ -89,12 +121,15 @@ func range_px() -> float:
 	var fixed: Variant = legendary("fixed_range")
 	if fixed != null:
 		return fixed
-	return level.tower_range(type_id, cell) * (1.0 + relic_bonus("range"))
+	var r: float = level.tower_range(type_id, cell) * (1.0 + relic_bonus("range"))
+	if tier >= 2:
+		r *= TowerTypes.TIER2_RANGE
+	return r * float(spec_val("range_x", 1.0))
 
 
 ## Bonus de cadence que ce Totem donne à ses voisins.
 func buff_value() -> float:
-	return float(data.get("buff", 0.0)) * effect_mult()
+	return float(data.get("buff", 0.0)) * effect_mult() * float(spec_val("buff_x", 1.0))
 
 
 func _process(delta: float) -> void:
@@ -121,7 +156,7 @@ func _fire_rate() -> float:
 				bonus += t.buff_value()
 			else:
 				bonus = maxf(bonus, t.buff_value())
-	rate *= (1.0 + bonus) * (1.0 + pack_bonus())
+	rate *= (1.0 + bonus) * (1.0 + pack_bonus()) * float(spec_val("rate_x", 1.0))
 	if rivalry():
 		rate *= Difficulty.RIVALRY_RATE
 	return rate
@@ -152,6 +187,7 @@ func pack_bonus() -> float:
 func _damage() -> float:
 	var dmg: float = data["damage"]
 	dmg *= (1.0 + relic_bonus("damage")) * float(legendary("damage_x", 1.0)) * Profile.damage_mult()
+	dmg *= tier_power() * float(spec_val("damage_x", 1.0)) * (1.0 + rage_bonus())
 	if Run.has_joker("cul_de_sac") and level.blocked_neighbors(cell) >= 3:
 		dmg *= 2.0
 	return dmg
@@ -163,7 +199,7 @@ func _damage_mult() -> float:
 
 
 func _poison_dps() -> float:
-	return float(data["poison_dps"]) * _damage_mult() * effect_mult()
+	return float(data["poison_dps"]) * _damage_mult() * effect_mult() * float(spec_val("poison_x", 1.0)) * (1.0 + rage_bonus())
 
 
 func _slow() -> Array:
@@ -172,11 +208,12 @@ func _slow() -> Array:
 	if Run.has_joker("givre_eternel"):
 		slow = 0.35
 		slow_time *= 2.0
+	slow = minf(slow, float(spec_val("deep_slow", 1.0)))
 	return [slow, slow_time]
 
 
 func _splash_radius() -> float:
-	return float(data["splash_radius"]) * (1.5 if Run.has_joker("artilleur") else 1.0) * effect_mult()
+	return float(data["splash_radius"]) * (1.5 if Run.has_joker("artilleur") else 1.0) * effect_mult() * float(spec_val("radius_x", 1.0))
 
 
 # --- Attaque -----------------------------------------------------------------
@@ -191,6 +228,17 @@ func _attack() -> bool:
 			if target == null:
 				return false
 			_show_shot(target)
+			if spec_val("pierce", false):
+				# Perce-rangs : touche tout ce qui est sur la trajectoire, jusqu'à la portée
+				var end := global_position + (target.global_position - global_position).normalized() * range_px()
+				shot_target = end - global_position
+				for e in level.enemies.duplicate():
+					if e != target and is_instance_valid(e) and not e.dead \
+							and Geometry2D.get_closest_point_to_segment(e.global_position, global_position, end).distance_to(e.global_position) <= 18.0:
+						e.take_damage(_damage())
+			var harpoon: Variant = spec_val("harpoon")
+			if harpoon != null:
+				target.apply_slow(harpoon[0], harpoon[1])
 			has_echo = false
 			if Run.has_joker("echo"):
 				var second := _closest_other(target)
@@ -205,8 +253,11 @@ func _attack() -> bool:
 				return false
 			_show_shot(target)
 			var center := target.global_position
+			var fire: Variant = spec_val("fire")
 			for e in level.enemies.duplicate():
 				if is_instance_valid(e) and not e.dead and e.global_position.distance_to(center) <= _splash_radius():
+					if fire != null:
+						e.apply_poison(fire[0] * _damage_mult() * tier_power(), fire[1])
 					e.take_damage(_damage())
 		"aura":
 			var hit := false
@@ -224,8 +275,21 @@ func _attack() -> bool:
 			if target == null:
 				return false
 			_show_shot(target)
-			target.apply_poison(_poison_dps(), data["poison_time"])
+			_poison(target)
+			var cloud: float = spec_val("cloud", 0.0)
+			if cloud > 0.0:
+				for e in level.enemies:
+					if e != target and is_instance_valid(e) and not e.dead and e.global_position.distance_to(target.global_position) <= cloud:
+						_poison(e)
 	return true
+
+
+## Empoisonne un ennemi (et le rend vulnérable avec la spécialisation Acide).
+func _poison(e: Enemy) -> void:
+	e.apply_poison(_poison_dps(), data["poison_time"])
+	var acid: float = spec_val("acid", 0.0)
+	if acid > 0.0:
+		e.acid = acid
 
 
 ## Lance du Pharaon : touche tous les ennemis sur la ligne de tir.
@@ -244,7 +308,7 @@ func _attack_line() -> bool:
 				e.apply_slow(s[0], s[1])
 				e.take_damage(_damage())
 			"poison":
-				e.apply_poison(_poison_dps(), data["poison_time"])
+				_poison(e)
 			_:
 				e.take_damage(_damage())
 	return true
@@ -287,7 +351,10 @@ func _find_target(min_range := 0.0, prefer_healthy := false) -> Enemy:
 			if not e.is_poisoned():
 				best = e
 			continue
-		if e.remaining_steps() < best.remaining_steps():
+		if spec_val("strongest", false):
+			if e.hp > best.hp:
+				best = e
+		elif e.remaining_steps() < best.remaining_steps():
 			best = e
 	return best
 
@@ -354,6 +421,13 @@ func _draw() -> void:
 			pts.append(pts[0])
 			draw_polyline(pts, dark, 2.0)
 			draw_arc(Vector2.ZERO, range_px(), 0.0, TAU, 48, Color(color, 0.25), 1.5)
+
+	# Niveau de la tour : un chevron doré par niveau au-dessus du premier
+	for k in tier - 1:
+		var x := s / 2 - 6 - k * 9
+		draw_colored_polygon(PackedVector2Array([Vector2(x - 4, -s / 2 + 7), Vector2(x, -s / 2 + 2), Vector2(x + 4, -s / 2 + 7)]), Color("ffd54a"))
+	if spec != "":
+		draw_string(ThemeDB.fallback_font, Vector2(-s / 2 + 2, -s / 2 + 11), spec.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ffd54a"))
 
 	# Reliques posées : une pierre par relique, de la couleur de sa rareté
 	var ids := relic_ids()
