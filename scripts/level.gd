@@ -221,6 +221,9 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 	e.walls = walls
 	e.venin = Run.has_joker("venin")
 	e.alchemy = Run.has_family("alchimistes", 3)
+	e.others = enemies
+	e.towers = towers
+	e.phase_changed.connect(_on_boss_phase)
 	if Difficulty.active("regen"):
 		e.regen = Difficulty.REGEN
 	e.died.connect(_on_enemy_died)
@@ -281,6 +284,19 @@ func _split(e: Enemy, where: Vector2) -> void:
 	for i in n:
 		var larva := _add_enemy(child_id, e.next_cell, hp_mult, speed_mult)
 		larva.position = where + Vector2.from_angle(TAU * i / n) * 10.0
+
+
+## Boss en deux phases : renforts et éventuellement gel des tours proches.
+func _on_boss_phase(e: Enemy) -> void:
+	var p: Dictionary = e.data["phase2"]
+	_say(p["text"], 3.0)
+	for i in int(p["count"]):
+		var add := _add_enemy(p["summon"], e.next_cell, e.hp_mult, e.speed / e.data["speed"])
+		add.position = e.position + Vector2.from_angle(TAU * i / float(p["count"])) * 18.0
+	if float(p["freeze"]) > 0.0:
+		for t in towers.values():
+			if is_instance_valid(t) and t.position.distance_to(e.position) <= float(p["freeze_range"]):
+				t.jam(float(p["freeze"]))
 
 
 func _remove_enemy(e: Enemy) -> void:

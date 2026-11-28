@@ -4,6 +4,7 @@ extends Node2D
 
 signal died(enemy: Enemy)
 signal reached_goal(enemy: Enemy)
+signal phase_changed(enemy: Enemy)   # boss : passe en phase 2
 
 var type_id := ""
 var data: Dictionary = {}
@@ -29,6 +30,13 @@ var hp_mult := 1.0           # multiplicateur de PV de la vague (sans le bonus d
 var elite := false           # difficulté « Élites errants » : plus de PV, coûte 1 vie de plus
 var acid := 0.0              # spécialisation Acide : dégâts subis en plus tant qu'il est empoisonné
 var regen := 0.0             # difficulté « Chair maudite » : part des PV regagnée par seconde
+var others: Array = []       # tous les ennemis du niveau (pour l'embaumeur)
+var towers: Dictionary = {}  # toutes les tours du niveau (pour le pilleur)
+var phase := 1               # boss : 2 sous la moitié des PV
+var ability_timer := 1.0     # soin / sabotage
+var heal_flash := 0.0        # affichage du soin
+var sabotage_line := Vector2.ZERO
+var sabotage_flash := 0.0
 
 
 func setup(id: String, grid_astar: AStarGrid2D, start: Vector2i, goal_cell: Vector2i, hp_mult: float, speed_mult: float) -> void:
@@ -42,6 +50,8 @@ func setup(id: String, grid_astar: AStarGrid2D, start: Vector2i, goal_cell: Vect
 	speed = data["speed"] * speed_mult
 	next_cell = start
 	position = Grid.cell_to_world(start)
+	if data.has("sabotage"):
+		ability_timer = data["sabotage"][2] * 0.5
 	repath()
 
 
@@ -65,9 +75,17 @@ func is_boss() -> bool:
 	return data.get("boss", false)
 
 
+func flies() -> bool:
+	return data.get("flies", false)
+
+
 ## Recalcule le chemin. Appelé à chaque fois que la grille change.
 ## On part de la case visée pour que l'ennemi ne fasse jamais demi-tour au milieu d'une case.
 func repath() -> void:
+	if flies():
+		next_cell = goal  # vole tout droit, les murs ne changent rien
+		path.clear()
+		return
 	var new_path: Array[Vector2i] = astar.get_id_path(next_cell, goal)
 	if new_path.is_empty() and next_cell != goal:
 		return  # aucun chemin (cas très rare) : on garde l'ancien
@@ -81,7 +99,7 @@ func _process(delta: float) -> void:
 	if dead:
 		return
 	var current_speed := speed * slow_factor
-	if ice.has(Grid.world_to_cell(position)):
+	if ice.has(Grid.world_to_cell(position)) and not flies():
 		current_speed *= 2.0  # ça glisse !
 	var target := Grid.cell_to_world(next_cell)
 	var step := current_speed * delta
@@ -110,6 +128,50 @@ func _update_effects(delta: float) -> void:
 			poison_dps = 0.0
 	elif regen > 0.0 and hp < max_hp:
 		hp = minf(max_hp, hp + max_hp * regen * delta)
+	heal_flash = maxf(0.0, heal_flash - delta)
+	sabotage_flash = maxf(0.0, sabotage_flash - delta)
+	if data.has("heal") or data.has("sabotage"):
+		ability_timer -= delta
+		if ability_timer <= 0.0:
+			if data.has("heal"):
+				ability_timer = 1.0
+				_heal_others()
+			else:
+				ability_timer = data["sabotage"][2]
+				_sabotage()
+
+
+## Embaumeur : soigne les ennemis proches (pas lui-même, pas les empoisonnés).
+func _heal_others() -> void:
+	var healed := false
+	for e in others:
+		if e == self or not is_instance_valid(e) or e.dead or e.is_poisoned() or e.hp >= e.max_hp:
+			continue
+		if e.position.distance_to(position) <= data["heal_range"]:
+			e.hp = minf(e.max_hp, e.hp + e.max_hp * data["heal"])
+			e.heal_flash = 0.4
+			healed = true
+	if healed:
+		heal_flash = 0.6
+
+
+## Pilleur : bloque la tour la plus proche à portée.
+func _sabotage() -> void:
+	var best: Node2D = null
+	var best_d: float = data["sabotage"][0]
+	for t in towers.values():
+		if not is_instance_valid(t) or t.is_queued_for_deletion():
+			continue
+		var d := position.distance_to(t.position)
+		if d <= best_d:
+			best = t
+			best_d = d
+	if best == null:
+		ability_timer = 0.5  # personne à portée : on réessaie vite
+		return
+	best.jam(data["sabotage"][1])
+	sabotage_line = best.position - position
+	sabotage_flash = 0.35
 
 
 func take_damage(amount: float) -> void:
@@ -123,6 +185,10 @@ func take_damage(amount: float) -> void:
 	if hp <= 0.0:
 		dead = true
 		died.emit(self)
+	elif phase == 1 and data.has("phase2") and hp <= max_hp * 0.5:
+		phase = 2
+		speed *= float(data["phase2"]["speed_x"])
+		phase_changed.emit(self)
 
 
 ## Ralentit l'ennemi. Le ralentissement le plus fort l'emporte, il ne se cumule pas.
@@ -145,6 +211,8 @@ func is_poisoned() -> bool:
 
 ## Nombre de cases avant la sortie (sert aux tours à viser le plus avancé).
 func remaining_steps() -> int:
+	if flies():
+		return int(position.distance_to(Grid.cell_to_world(goal)) / Grid.CELL)
 	return path.size()
 
 
@@ -187,7 +255,40 @@ func _draw() -> void:
 				dir = Vector2.RIGHT
 			for k in 3:
 				draw_circle(dir * r * (0.7 - k * 0.7), r * (0.75 - k * 0.15), body if k > 0 else body.darkened(0.2))
+		"bird":
+			# Oiseau momifié vu de dessus : deux ailes qui battent, un bec
+			var dir := (Grid.cell_to_world(goal) - position).normalized()
+			if dir == Vector2.ZERO:
+				dir = Vector2.RIGHT
+			var side := dir.orthogonal()
+			var flap := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 90.0)
+			draw_circle(Vector2(4, 8), r * 0.7, Color(0, 0, 0, 0.18))  # ombre au sol
+			for k in [-1, 1]:
+				draw_colored_polygon(PackedVector2Array([side * k * r * 0.3, side * k * r * 1.5 * flap - dir * r * 0.5, -dir * r * 0.5 + side * k * r * 0.2]), body)
+			draw_circle(Vector2.ZERO, r * 0.45, body)
+			draw_colored_polygon(PackedVector2Array([dir * r * 0.35 + side * 3, dir * r * 1.1, dir * r * 0.35 - side * 3]), Color("2b2b2b"))
+			for k in 2:
+				draw_line(side * (k * 4 - 2) - dir * 2, side * (k * 4 - 2) + dir * 2, edge, 1.0)
+		"healer":
+			draw_circle(Vector2.ZERO, r, body)
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
+			draw_rect(Rect2(-r * 0.18, -r * 0.6, r * 0.36, r * 1.2), Color("eafff6"))
+			draw_rect(Rect2(-r * 0.6, -r * 0.18, r * 1.2, r * 0.36), Color("eafff6"))
+			if heal_flash > 0.0:
+				draw_arc(Vector2.ZERO, data["heal_range"] * (1.0 - heal_flash * 0.5), 0.0, TAU, 40, Color(0.5, 1.0, 0.8, heal_flash * 0.5), 2.0)
+		"saboteur":
+			# Pilleur encapuchonné avec un sac
+			draw_circle(Vector2.ZERO, r, body)
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
+			draw_circle(Vector2(0, -r * 0.15), r * 0.5, edge)
+			draw_circle(Vector2(-r * 0.18, -r * 0.2), 2.0, Color("ffe066"))
+			draw_circle(Vector2(r * 0.18, -r * 0.2), 2.0, Color("ffe066"))
+			draw_circle(Vector2(r * 0.75, r * 0.5), r * 0.4, Color("a08455"))
+			if sabotage_flash > 0.0:
+				draw_line(Vector2.ZERO, sabotage_line, Color(0.75, 0.55, 1.0, sabotage_flash * 2.5), 3.0)
 		"boss":
+			if phase == 2:
+				draw_circle(Vector2.ZERO, r + 12, Color(1, 0.3, 0.2, 0.18 + 0.1 * sin(Time.get_ticks_msec() / 120.0)))
 			for k in 8:
 				var a := k * TAU / 8.0
 				draw_line(Vector2.from_angle(a) * r, Vector2.from_angle(a) * (r + 7), edge, 4.0)
@@ -199,6 +300,8 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r, body)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
 
+	if heal_flash > 0.0 and data["shape"] != "healer":
+		draw_string(ThemeDB.fallback_font, Vector2(r * 0.6, -r - 2), "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 1.0, 0.7, heal_flash * 2.0))
 	if elite:
 		draw_arc(Vector2.ZERO, r + 6, 0.0, TAU, 28, Color("ffd54a"), 2.5)
 	if slow_time > 0.0:
