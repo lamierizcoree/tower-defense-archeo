@@ -12,9 +12,19 @@ const IRON := Color("4a4f57")
 const BRASS := Color("c99a3c")
 const COPPER := Color("b8673a")
 
+## Sprites dessinés (art/sources/*.svg, rendus en PNG 2x). Les tours sans sprite
+## sont encore dessinées par code.
+const SPRITES := {
+	"arbalete": {"base": preload("res://art/sprites/arbalete_socle.png"),
+		"weapon": preload("res://art/sprites/arbalete_arme.png"), "base_scale": 0.8, "weapon_scale": 0.72},
+}
+
 
 static func draw(c: CanvasItem, type_id: String, accent: Color, aim: float, kick: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
+	if SPRITES.has(type_id):
+		_draw_sprites(c, SPRITES[type_id], aim, kick)  # l'ombre est dans le sprite du socle
+		return
 	# Ombre portée au sol
 	c.draw_colored_polygon(Art.ellipse(Vector2(4, 12), Vector2(18, 8)), Color(0, 0, 0, 0.28))
 	match type_id:
@@ -37,6 +47,17 @@ static func draw(c: CanvasItem, type_id: String, accent: Color, aim: float, kick
 			_totem(c, t, accent)
 		_:
 			c.draw_circle(Vector2.ZERO, 14.0, accent)
+
+
+## Tour en sprites : le socle fixe, puis l'arme qui pivote vers la cible et recule au tir.
+static func _draw_sprites(c: CanvasItem, sp: Dictionary, aim: float, kick: float) -> void:
+	var bs: float = sp["base_scale"]
+	c.draw_texture_rect(sp["base"], Rect2(Vector2(-32, -32) * bs, Vector2(64, 64) * bs), false)
+	var ws: float = sp["weapon_scale"]
+	var recoil := -Vector2.from_angle(aim) * kick * 3.0
+	c.draw_set_transform(Vector2(0, -7) + recoil, aim, Vector2(ws, ws))
+	c.draw_texture_rect(sp["weapon"], Rect2(-32, -32, 64, 64), false)
+	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 # --- Socles ------------------------------------------------------------------

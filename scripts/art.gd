@@ -8,6 +8,10 @@ const BRICK_H := 8.0      # hauteur d'une rangée de pierres
 const BRICK_W := 16.0     # largeur d'une pierre
 const WALL_FRONT := 9.0   # hauteur de la face avant visible d'un mur
 const SHADOW := Color(0, 0, 0, 0.22)
+const WALL_TEXTURES := {
+	"desert": preload("res://art/sprites/mur_desert.png"),
+	"glace": preload("res://art/sprites/mur_glace.png"),
+}
 
 ## Couleurs des murs selon le biome.
 const WALL_PALETTES := {
@@ -65,29 +69,11 @@ static func draw_wall(canvas: CanvasItem, cell: Vector2i, walls: Dictionary, bio
 	var bottom := r.end.y - (0.0 if s else 2.0)
 	var face_bottom := bottom if s else bottom - WALL_FRONT
 
-	# Dessus : rangées de pierres décalées, alignées sur toute la grille pour se raccorder
+	# Dessus : sprite de pierres taillées (art/sources/mur_*.svg), rendu en 2x.
+	# Le motif se raccorde d'une case à l'autre, donc on découpe juste la partie visible.
 	var face := Rect2(left, top, right - left, face_bottom - top)
-	canvas.draw_rect(face, pal["mortar"])
-	var row0 := int(floor((top - Grid.OFFSET.y) / BRICK_H))
-	var row1 := int(ceil((face_bottom - Grid.OFFSET.y) / BRICK_H))
-	for row in range(row0, row1):
-		var y0 := Grid.OFFSET.y + row * BRICK_H
-		var shift := (BRICK_W / 2.0) if row % 2 != 0 else 0.0
-		var k0 := int(floor((left - shift) / BRICK_W))
-		var k1 := int(ceil((right - shift) / BRICK_W))
-		for k in range(k0, k1):
-			var x0 := shift + k * BRICK_W
-			var brick := Rect2(x0 + 1, y0 + 1, BRICK_W - 2, BRICK_H - 2).intersection(face)
-			if brick.size.x <= 0.5 or brick.size.y <= 0.5:
-				continue
-			var v := hash01(k, row)
-			var col: Color = pal["top"].darkened(0.12 * v) if v < 0.5 else pal["top"].lightened(0.08 * (v - 0.5))
-			canvas.draw_rect(brick, col)
-			# arête éclairée en haut de chaque pierre
-			canvas.draw_line(brick.position, Vector2(brick.end.x, brick.position.y), Color(pal["edge"], 0.45), 1.0)
-			if v > 0.85:
-				# fissure ou pierre usée
-				canvas.draw_line(brick.position + Vector2(3, 2), brick.position + Vector2(7, brick.size.y - 1), Color(pal["mortar"], 0.8), 1.0)
+	var tex: Texture2D = WALL_TEXTURES.get(biome_id, WALL_TEXTURES["desert"])
+	canvas.draw_texture_rect_region(tex, face, Rect2((face.position - r.position) * 2.0, face.size * 2.0))
 
 	# Neige sur les murs de glace
 	if pal.has("snow") and not n:
