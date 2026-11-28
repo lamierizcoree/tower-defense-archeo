@@ -193,6 +193,11 @@ func wave_gold() -> int:
 	return 5 * level_of("economie")
 
 
+## Amélioration Forge : prix des fusions de reliques.
+func forge_mult() -> float:
+	return 1.0 - 0.03 * level_of("forge")
+
+
 func bonus_lives() -> int:
 	return level_of("rempart")
 

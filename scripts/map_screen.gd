@@ -9,6 +9,7 @@ const TOP := 190.0
 const HEIGHT := 360.0
 
 const CODEX_BUTTON := Rect2(800, 20, 140, 34)
+const FORGE_BUTTON := Rect2(650, 20, 140, 34)
 
 var hovered := Vector2i(-1, -1)
 
@@ -53,6 +54,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			Run.codex_return = "res://scenes/map.tscn"
 			get_tree().change_scene_to_file("res://scenes/codex.tscn")
 			return
+		if FORGE_BUTTON.has_point(get_global_mouse_position()):
+			Run.forge_free = false
+			get_tree().change_scene_to_file("res://scenes/forge.tscn")
+			return
 		var n := _node_at(get_global_mouse_position())
 		if n in Run.reachable():
 			Run.enter_level(n)
@@ -64,6 +69,7 @@ func _draw() -> void:
 	var colors: Dictionary = biome["colors"]
 	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), colors["background"])
 	UI.button(self, CODEX_BUTTON, "Carnet", CODEX_BUTTON.has_point(get_global_mouse_position()))
+	UI.button(self, FORGE_BUTTON, "Forge", FORGE_BUTTON.has_point(get_global_mouse_position()))
 
 	# En-tête : biome et règles
 	var title := "Biome %d/%d : %s, %s" % [Run.biome_index + 1, Biomes.count(), biome["name"], biome["subtitle"]]

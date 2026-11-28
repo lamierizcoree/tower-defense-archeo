@@ -23,7 +23,7 @@ const DATA := {
 	"rempart": {"name": "Rempart", "desc": "+1 vie au départ de l'expédition"},
 	"chance": {"name": "Chance", "desc": "Jokers et reliques plus rares. À 10 pts, légendaires : 5 % des jokers, 8 % des reliques"},
 	"preparation": {"name": "Préparation", "desc": "5 pts : une relique commune au départ. 10 pts : un emplacement de joker en plus"},
-	"forge": {"name": "Forge", "desc": "-3 % sur le coût des fusions (arrive avec la fusion des reliques)", "disabled": true},
+	"forge": {"name": "Forge", "desc": "-3 % sur le coût des fusions de reliques"},
 }
 
 
