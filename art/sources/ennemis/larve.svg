@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Larve : ver segmenté vu de dessus, tête vers la droite (pivote). -->
+  <defs>
+    <radialGradient id="l" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff3a8"/><stop offset="0.6" stop-color="#e8d36a"/><stop offset="1" stop-color="#a8902a"/></radialGradient>
+  </defs>
+  <g stroke="#4a3a08" stroke-width="1.2">
+    <circle cx="14" cy="32" r="7" fill="url(#l)"/>
+    <circle cx="24" cy="32" r="9" fill="url(#l)"/>
+    <circle cx="36" cy="32" r="10" fill="url(#l)"/>
+    <circle cx="48" cy="32" r="9" fill="#d6b84a"/>
+    <path d="M55 27 l5 -3 M55 37 l5 3" stroke-width="1.6"/>
+    <circle cx="51" cy="29" r="1.6" fill="#1a1208"/><circle cx="51" cy="35" r="1.6" fill="#1a1208"/>
+  </g>
+</svg>

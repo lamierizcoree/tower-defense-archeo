@@ -37,6 +37,24 @@ var ability_timer := 1.0     # soin / sabotage
 var heal_flash := 0.0        # affichage du soin
 var sabotage_line := Vector2.ZERO
 var sabotage_flash := 0.0
+## Sprites des ennemis (art/sources/ennemis/*.svg). Ceux de TURNING regardent où ils vont,
+## les autres restent debout et se dandinent en marchant.
+const SPRITES := {
+	"eclaireur": preload("res://art/sprites/ennemis/eclaireur.png"),
+	"rapide": preload("res://art/sprites/ennemis/rapide.png"),
+	"colosse": preload("res://art/sprites/ennemis/colosse.png"),
+	"fouisseur": preload("res://art/sprites/ennemis/fouisseur.png"),
+	"jarre": preload("res://art/sprites/ennemis/jarre.png"),
+	"larve": preload("res://art/sprites/ennemis/larve.png"),
+	"ibis": preload("res://art/sprites/ennemis/ibis.png"),
+	"embaumeur": preload("res://art/sprites/ennemis/embaumeur.png"),
+	"pilleur": preload("res://art/sprites/ennemis/pilleur.png"),
+	"scarabee": preload("res://art/sprites/ennemis/scarabee.png"),
+	"colosse_gele": preload("res://art/sprites/ennemis/colosse_gele.png"),
+}
+const TURNING := ["rapide", "fouisseur", "larve", "ibis", "scarabee"]
+const SPRITE_SCALE := 3.0   # taille du sprite = rayon × 3
+
 var last_hit: Node = null    # dernière tour qui l'a touché (bilan de fin de niveau)
 var poison_source: Node = null
 
@@ -234,6 +252,54 @@ func _draw() -> void:
 		body.a = 0.45  # le fouisseur est sous terre
 	var edge := body.darkened(0.5)
 
+	if SPRITES.has(type_id):
+		_draw_sprite(r, under_wall)
+	else:
+		_draw_shape(r, body, edge)
+
+	if data["shape"] == "healer" and heal_flash > 0.0:
+		draw_arc(Vector2.ZERO, data["heal_range"] * (1.0 - heal_flash * 0.5), 0.0, TAU, 40, Color(0.5, 1.0, 0.8, heal_flash * 0.5), 2.0)
+	if data["shape"] == "saboteur" and sabotage_flash > 0.0:
+		draw_line(Vector2.ZERO, sabotage_line, Color(0.75, 0.55, 1.0, sabotage_flash * 2.5), 3.0)
+	_draw_status(r)
+
+
+## Ennemi en sprite : ombre au sol, puis l'image, tournée vers sa route ou qui se dandine.
+func _draw_sprite(r: float, under_wall: bool) -> void:
+	var t := Time.get_ticks_msec() / 1000.0 + float(get_instance_id() % 97) * 0.13
+	var size := r * SPRITE_SCALE
+	var fly := flies()
+	if is_boss() and phase == 2:
+		draw_circle(Vector2.ZERO, r + 12, Color(1, 0.3, 0.2, 0.18 + 0.1 * sin(t * 8.0)))
+	# ombre (plus loin et plus petite pour les volants)
+	var shadow_at := Vector2(6, r * 0.9) if fly else Vector2(1, r * 0.6)
+	var shadow := PackedVector2Array()
+	for i in 16:
+		var a := TAU * i / 16.0
+		shadow.append(shadow_at + Vector2(cos(a) * r * (0.7 if fly else 0.95), sin(a) * r * 0.35))
+	draw_colored_polygon(shadow, Color(0, 0, 0, 0.12 if under_wall else 0.25))
+	var angle := 0.0
+	var scale := Vector2.ONE
+	if type_id in TURNING:
+		var target := Grid.cell_to_world(goal if fly else next_cell)
+		var dir := target - position
+		angle = dir.angle() if dir.length() > 0.5 else 0.0
+		if fly:
+			scale.y = 0.75 + 0.25 * sin(t * 12.0)  # battements d'ailes
+	else:
+		angle = sin(t * 7.0) * 0.08  # se dandine
+	var tint := Color.WHITE
+	if is_poisoned():
+		tint = Color(0.7, 1.0, 0.6)
+	if under_wall:
+		tint.a = 0.45  # le fouisseur est sous terre
+	draw_set_transform(Vector2(0, -2), angle, scale)
+	draw_texture_rect(SPRITES[type_id], Rect2(-size / 2.0, -size / 2.0, size, size), false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Ancien dessin par formes (ennemis sans sprite).
+func _draw_shape(r: float, body: Color, edge: Color) -> void:
 	match data["shape"]:
 		"triangle":
 			var dir := (Grid.cell_to_world(next_cell) - position).normalized()
@@ -282,8 +348,6 @@ func _draw() -> void:
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
 			draw_rect(Rect2(-r * 0.18, -r * 0.6, r * 0.36, r * 1.2), Color("eafff6"))
 			draw_rect(Rect2(-r * 0.6, -r * 0.18, r * 1.2, r * 0.36), Color("eafff6"))
-			if heal_flash > 0.0:
-				draw_arc(Vector2.ZERO, data["heal_range"] * (1.0 - heal_flash * 0.5), 0.0, TAU, 40, Color(0.5, 1.0, 0.8, heal_flash * 0.5), 2.0)
 		"saboteur":
 			# Pilleur encapuchonné avec un sac
 			draw_circle(Vector2.ZERO, r, body)
@@ -292,8 +356,6 @@ func _draw() -> void:
 			draw_circle(Vector2(-r * 0.18, -r * 0.2), 2.0, Color("ffe066"))
 			draw_circle(Vector2(r * 0.18, -r * 0.2), 2.0, Color("ffe066"))
 			draw_circle(Vector2(r * 0.75, r * 0.5), r * 0.4, Color("a08455"))
-			if sabotage_flash > 0.0:
-				draw_line(Vector2.ZERO, sabotage_line, Color(0.75, 0.55, 1.0, sabotage_flash * 2.5), 3.0)
 		"boss":
 			if phase == 2:
 				draw_circle(Vector2.ZERO, r + 12, Color(1, 0.3, 0.2, 0.18 + 0.1 * sin(Time.get_ticks_msec() / 120.0)))
@@ -308,6 +370,10 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r, body)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
 
+
+
+## Anneaux d'état et barre de vie, communs à tous les ennemis.
+func _draw_status(r: float) -> void:
 	if heal_flash > 0.0 and data["shape"] != "healer":
 		draw_string(ThemeDB.fallback_font, Vector2(r * 0.6, -r - 2), "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 1.0, 0.7, heal_flash * 2.0))
 	if elite:

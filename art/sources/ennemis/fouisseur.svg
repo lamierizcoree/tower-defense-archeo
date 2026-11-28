@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fouisseur : bête fouisseuse vue de dessus, griffes vers la droite (pivote). -->
+  <defs>
+    <radialGradient id="c" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#c99a62"/><stop offset="0.6" stop-color="#9c6b3a"/><stop offset="1" stop-color="#5a3a1a"/></radialGradient>
+  </defs>
+  <g stroke="#2a1708" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M44 20 l10 -4 l2 4 l-8 5 Z M44 44 l10 4 l2 -4 l-8 -5 Z" fill="#e8d6b0"/>
+    <path d="M52 17 l5 -3 M54 19 l6 -1 M52 47 l5 3 M54 45 l6 1" stroke="#e8d6b0" stroke-width="1.6"/>
+    <ellipse cx="30" cy="32" rx="20" ry="15" fill="url(#c)"/>
+    <path d="M14 26 Q30 22 46 26 M12 32 Q30 30 48 32 M14 38 Q30 42 46 38" fill="none" stroke="#5a3a1a" stroke-width="1" opacity="0.8"/>
+    <ellipse cx="49" cy="32" rx="7" ry="6" fill="#b5855a"/>
+    <circle cx="55" cy="32" r="2.2" fill="#e88a8a"/>
+    <path d="M10 32 l-6 0" stroke="#5a3a1a" stroke-width="2"/>
+  </g>
+</svg>
