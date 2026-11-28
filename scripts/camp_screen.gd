@@ -101,6 +101,9 @@ func _draw() -> void:
 			draw_rect(r, Color(1, 1, 1, 0.14 if hot else 0.06))
 			draw_rect(r, Color("ff6b5a") if hot else Jokers.color_of(Run.jokers[i]), false, 2.0)
 			draw_string(font, r.position + Vector2(0, 38), Jokers.get_joker(Run.jokers[i])["name"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 14, Color.WHITE)
+		for i in Run.jokers.size():
+			if _joker_rect(i).has_point(mouse):
+				UI.joker_tip(self, Run.jokers[i], mouse)
 		return
 	var options := _options()
 	for i in options.size():

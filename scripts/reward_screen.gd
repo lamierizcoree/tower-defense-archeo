@@ -118,6 +118,7 @@ func _take(id: String) -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
+	var tip := ""  # joker survolé : son infobulle est dessinée à la fin
 	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Run.biome()["colors"]["background"])
 
 	var title := "Niveau réussi ! Choisis une récompense"
@@ -181,11 +182,11 @@ func _draw() -> void:
 		draw_string(font, r.position + Vector2(0, 50), card_name, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, title_size, Color.WHITE)
 		draw_string(font, r.position + Vector2(0, 78), kind_label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, border)
 		draw_multiline_string(font, r.position + Vector2(18, 122), desc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 36, 15, -1, Color(1, 1, 1, 0.85))
-		var towers: Array = Jokers.towers_of(card["id"]) if card["kind"] == "joker" else Relics.towers_of(card["id"])
-		if not towers.is_empty():
-			# images des tours que cette carte améliore
-			var ty := r.size.y - (76.0 if card["kind"] == "joker" else 60.0)
-			TowerArt.draw_icon_row(self, towers, r.position + Vector2(r.size.x / 2, ty), 32.0, 8.0)
+		if card["kind"] == "relic" and not Relics.towers_of(card["id"]).is_empty():
+			# images des tours que cette relique améliore
+			TowerArt.draw_icon_row(self, Relics.towers_of(card["id"]), r.position + Vector2(r.size.x / 2, r.size.y - 60.0), 32.0, 8.0)
+		if card["kind"] == "joker" and r.has_point(mouse):
+			tip = card["id"]
 		if card["kind"] == "joker":
 			var fam: Dictionary = Jokers.FAMILIES[Jokers.family_of(card["id"])]
 			var count := Jokers.family_count(Run.jokers, Jokers.family_of(card["id"]))
@@ -210,6 +211,8 @@ func _draw() -> void:
 		draw_rect(r, Color(1, 1, 1, 0.12 if hot else 0.05))
 		draw_rect(r, Color("ff6b5a") if hot else Color(1, 1, 1, 0.2), false, 2.0)
 		if i < Run.jokers.size():
+			if r.has_point(mouse) and pending == "":
+				tip = Run.jokers[i]
 			var j := Jokers.get_joker(Run.jokers[i])
 			draw_string(font, r.position + Vector2(0, 26), j["name"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 15, Color.WHITE)
 			var fam: Dictionary = Jokers.FAMILIES[j["family"]]
@@ -236,3 +239,5 @@ func _draw() -> void:
 		else:
 			draw_rect(r, Color(1, 1, 1, 0.15), false, 1.0)
 	draw_string(font, Vector2(0, 718), "Tes reliques (%d/%d)" % [Run.relics.size(), Relics.MAX_HELD], HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
+	if tip != "":
+		UI.joker_tip(self, tip, mouse)

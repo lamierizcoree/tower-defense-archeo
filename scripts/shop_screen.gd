@@ -80,6 +80,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
+	var tip := ""  # joker survolé : son infobulle est dessinée à la fin
 	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("2a2118"))
 	draw_string(font, Vector2(0, 70), "Le marchand ambulant", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 32, Color("ffe066"))
 	draw_string(font, Vector2(0, 105), "« Tout se vend, tout s'achète. Surtout ce qui vient des tombeaux. »", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 15, Color(1, 1, 1, 0.6))
@@ -103,10 +104,12 @@ func _draw() -> void:
 				title_txt = j["name"]
 				color = Jokers.color_of(item["id"])
 				label = "JOKER %s\n" % Jokers.FAMILIES[j["family"]]["symbol"] + Jokers.RARITY_NAMES[j["rarity"]].to_upper()
+				desc = j["desc"]
 				var unlock := Jokers.would_unlock(Run.jokers, item["id"])
 				if unlock != "" and not item["sold"]:
 					desc += "\n\nActive : " + unlock
-				desc = j["desc"]
+				if r.has_point(mouse) and not item["sold"]:
+					tip = item["id"]
 			"lives":
 				title_txt = "Trousse de soins"
 				color = Color("e06666")
@@ -120,11 +123,7 @@ func _draw() -> void:
 		draw_multiline_string(font, r.position + Vector2(8, 32), title_txt, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 16, 16, 2, Color(1, 1, 1, alpha))
 		draw_multiline_string(font, r.position + Vector2(0, 86), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11, 2, Color(color, alpha))
 		draw_multiline_string(font, r.position + Vector2(8, 132), desc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 16, 12, 7, Color(1, 1, 1, 0.8 * alpha))
-		var item_towers: Array = []
-		if item["kind"] == "joker":
-			item_towers = Jokers.towers_of(item["id"])
-		elif item["kind"] == "relic":
-			item_towers = Relics.towers_of(item["id"])
+		var item_towers: Array = Relics.towers_of(item["id"]) if item["kind"] == "relic" else []
 		if not item_towers.is_empty() and not item["sold"]:
 			TowerArt.draw_icon_row(self, item_towers, r.position + Vector2(r.size.x / 2, r.size.y - 52), 28.0)
 		var price := "VENDU" if item["sold"] else "%d trésor" % item["price"]
@@ -134,3 +133,5 @@ func _draw() -> void:
 		draw_string(font, Vector2(0, 470), message, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 17, Color("ffe066"))
 	draw_string(font, Vector2(0, 520), "Le trésor vient de l'or qu'il te reste à la fin de chaque niveau (la moitié est gardée).", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 13, Color(1, 1, 1, 0.5))
 	UI.button(self, LEAVE, "Repartir", LEAVE.has_point(mouse))
+	if tip != "":
+		UI.joker_tip(self, tip, mouse)
