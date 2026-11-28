@@ -99,13 +99,13 @@ Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
 ## L'expédition
 
 1. **La carte** : on choisit sa prochaine étape parmi celles entourées. Le premier étage n'a que des combats, et l'étage juste avant le boss contient toujours un marchand ou un feu de camp.
-   - ⚔ combat : 2 vagues.
-   - ! élite : 3 vagues plus dures, une récompense rare garantie.
-   - ✦ fouille : 2 vagues avec une mission (aucune fuite, 4 tours maximum, ou 15 murs maximum). Mission réussie = une relique rare au moins.
+   - ⚔ combat : 5 vagues.
+   - ! élite : 5 vagues plus dures, une récompense rare garantie.
+   - ✦ fouille : 5 vagues avec une mission (aucune fuite, 4 tours maximum, ou 15 murs maximum). Mission réussie = une relique rare au moins.
    - ? événement : une découverte avec un choix (sarcophage, inscription, puits, idole, caravane, carte). Certains choix sont risqués.
    - $ marchand : 3 reliques, 2 jokers et une trousse de soins (+3 vies), payés en trésor.
    - ▲ feu de camp : au choix, se reposer (+6 vies), fouiller les environs (+25 trésor) ou se défaire d'un joker.
-   - ☠ boss : 3 vagues, le boss arrive à la dernière.
+   - ☠ boss : 5 vagues, le boss arrive à la dernière.
 2. **Le niveau** : on repart d'une grille vide avec de l'or neuf. Les vies, elles, se gardent d'un niveau à l'autre.
 3. **La récompense** : 1 carte parmi 3 (joker ou relique), ou passer pour gagner 3 vies. On garde 5 jokers et 8 reliques au maximum : au-delà, il faut en abandonner un.
 4. **Le bilan** : à la fin de chaque niveau réussi, un bilan montre les ennemis vaincus, les fuites, l'or gagné, le trésor gardé, le score, et les dégâts de chaque tour (la meilleure est marquée d'une étoile). Espace ou clic pour continuer.

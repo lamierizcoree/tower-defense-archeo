@@ -188,8 +188,15 @@ const POOLS := [
 ]
 const BOSS_LAYOUTS := ["d_boss", "g_boss"]
 
-## Nombre de vagues selon le type de niveau.
-const WAVE_COUNT := {"combat": 2, "elite": 3, "boss": 3, "fouille": 2}
+## Nombre de vagues selon le type de niveau (5 partout : demande de Lmz, le jeu était trop facile).
+const WAVE_COUNT := {"combat": 5, "elite": 5, "boss": 5, "fouille": 5}
+
+## Réglages de la difficulté des vagues (à ajuster en jouant).
+const BASE_COUNT := 7            # ennemis dans la 1re vague du 1er niveau
+const COUNT_PER_LEVEL := 1       # ennemis en plus par niveau de l'expédition
+const COUNT_PER_WAVE := 3        # ennemis en plus à chaque vague du niveau
+const HP_PER_LEVEL := 0.22       # PV en plus par niveau de l'expédition (+22 %)
+const HP_PER_WAVE := 0.12        # PV en plus à chaque vague du niveau (+12 %)
 
 
 static func get_layout(id: String) -> Dictionary:
@@ -205,24 +212,27 @@ static func make_waves(rng: RandomNumberGenerator, biome_index: int, floor_index
 	var waves := []
 	var n: int = WAVE_COUNT[type]
 	for w in n:
-		var count := 6 + difficulty + w * 2
+		var count := BASE_COUNT + difficulty * COUNT_PER_LEVEL + w * COUNT_PER_WAVE
 		if type == "elite":
 			count = int(count * 1.3)
+		# Les ennemis spéciaux arrivent au fil des vagues : les dernières vagues d'un niveau
+		# ressemblent aux premières vagues des niveaux suivants.
+		var level := difficulty + w / 2
 		var fast := int(count * float(biome["fast_share"]))
-		var diggers := (1 + difficulty / 2) if (biome["diggers"] and difficulty >= 1) else 0
+		var diggers := (1 + level / 2) if (biome["diggers"] and level >= 1) else 0
 		var tanks := 0
-		if difficulty >= 2:
-			tanks = (difficulty - 1) / 2
+		if level >= 2:
+			tanks = (level - 1) / 2
 		if type == "elite":
 			tanks += 1
-		if biome["id"] == "glace":
+		if biome["id"] == "glace" and w >= 1:
 			tanks += 1
-		var jars := (1 + difficulty / 3) if difficulty >= 1 else 0
-		var flyers := (1 + difficulty / 3) if difficulty >= 2 else 0
+		var jars := (1 + level / 3) if level >= 1 else 0
+		var flyers := (1 + level / 3) if level >= 2 else 0
 		var healers := 0
-		if difficulty >= 3:
-			healers = 1 + (1 if difficulty >= 7 else 0) + (1 if type == "elite" else 0)
-		var saboteurs := (1 + (difficulty - 4) / 2) if difficulty >= 4 else 0
+		if level >= 3:
+			healers = 1 + (1 if level >= 7 else 0) + (1 if type == "elite" else 0)
+		var saboteurs := (1 + (level - 4) / 2) if level >= 4 else 0
 		var normal := maxi(2, count - fast - diggers - tanks - jars - flyers - healers - saboteurs)
 
 		var list: Array[String] = []
@@ -243,10 +253,19 @@ static func make_waves(rng: RandomNumberGenerator, biome_index: int, floor_index
 		for i in saboteurs:
 			list.append("pilleur")
 		_shuffle(rng, list)
+		# Élites (étoile devant le type) dans les dernières vagues : 1 à la 4e, plus à la 5e
+		var elites := 0
+		if w == n - 2:
+			elites = 1 if difficulty >= 2 else 0
+		elif w == n - 1:
+			elites = 1 + difficulty / 3 + (1 if type == "elite" else 0)
+		for k in mini(elites, list.size()):
+			list[k] = "*" + list[k]
+		_shuffle(rng, list)
 		if type == "boss" and w == n - 1:
 			list.append(biome["boss"])
 
-		var hp_mult := (1.0 + 0.2 * difficulty + 0.08 * w) * (1.25 if type == "elite" else 1.0)
+		var hp_mult := (1.0 + HP_PER_LEVEL * difficulty + HP_PER_WAVE * w) * (1.25 if type == "elite" else 1.0)
 		waves.append({"enemies": list, "hp_mult": hp_mult})
 	return waves
 
