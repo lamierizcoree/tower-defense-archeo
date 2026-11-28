@@ -238,6 +238,12 @@ Clique sur une tour posée (ou survole-la et appuie sur **U**) pour ouvrir son m
 
 Revendre une tour rend la moitié de tout ce qu'elle a coûté (pose et améliorations). Les chiffres sont dans `scripts/tower_types.gd`.
 
+## Les sprites
+
+Une partie des graphismes est faite de sprites dessinés en vectoriel : les sources sont dans `art/sources/*.svg` et les images utilisées par le jeu dans `art/sprites/*.png` (rendues en taille double pour rester nettes). Pour l'instant : l'Arbalète (socle et arme qui pivote) et le dessus des murs (désert et glace). Le reste est encore dessiné par code dans `scripts/art.gd` et `scripts/tower_art.gd`.
+
+Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur vectoriel), puis l'exporter en PNG à 200 % dans `art/sprites/` avec le même nom, ou lancer `node tools/render_svg.js art/sources art/sprites`.
+
 ## Organisation du code
 
 - `scenes/` : les écrans (camp de base, carnet, améliorations, carte, niveau, récompense, fin). Le camp de base est lancé au démarrage.

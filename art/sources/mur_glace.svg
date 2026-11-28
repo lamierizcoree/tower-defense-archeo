@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Dessus d'un mur de glace : pierre grise, motif qui se raccorde d'une case à l'autre
+       (rangées de 8 px, pierres de 16 px, une rangée sur deux décalée de 8 px). -->
+  <defs>
+    <linearGradient id="p" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9c4cf"/>
+      <stop offset="1" stop-color="#8796a4"/>
+    </linearGradient>
+    <linearGradient id="q" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9b5c1"/>
+      <stop offset="1" stop-color="#7b8a98"/>
+    </linearGradient>
+    <linearGradient id="r" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c6d0d9"/>
+      <stop offset="1" stop-color="#93a1ae"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" fill="#56636f"/>
+  <g stroke="#434e58" stroke-width="0.5">
+    <!-- rangées paires -->
+    <rect x="0.7" y="0.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="16.7" y="0.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <rect x="32.7" y="0.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="0.7" y="16.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <rect x="16.7" y="16.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="32.7" y="16.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="0.7" y="32.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="16.7" y="32.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="32.7" y="32.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <!-- rangées impaires, décalées : les demi-pierres des bords se rejoignent avec la case voisine -->
+    <rect x="-7.3" y="8.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="8.7" y="8.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="24.7" y="8.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <rect x="40.7" y="8.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="-7.3" y="24.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="8.7" y="24.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <rect x="24.7" y="24.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="40.7" y="24.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="-7.3" y="40.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+    <rect x="8.7" y="40.7" width="14.6" height="6.6" rx="1.2" fill="url(#r)"/>
+    <rect x="24.7" y="40.7" width="14.6" height="6.6" rx="1.2" fill="url(#p)"/>
+    <rect x="40.7" y="40.7" width="14.6" height="6.6" rx="1.2" fill="url(#q)"/>
+  </g>
+  <!-- arêtes éclairées -->
+  <g stroke="#f4f8fb" stroke-opacity="0.55" stroke-width="0.7" fill="none">
+    <path d="M1.5 1.2 H14.5 M17.5 1.2 H30.5 M33.5 1.2 H46.5 M9.5 9.2 H22.5 M25.5 9.2 H38.5 M41.5 9.2 H48 M0 9.2 H6.5
+             M1.5 17.2 H14.5 M17.5 17.2 H30.5 M33.5 17.2 H46.5 M9.5 25.2 H22.5 M25.5 25.2 H38.5 M41.5 25.2 H48 M0 25.2 H6.5
+             M1.5 33.2 H14.5 M17.5 33.2 H30.5 M33.5 33.2 H46.5 M9.5 41.2 H22.5 M25.5 41.2 H38.5 M41.5 41.2 H48 M0 41.2 H6.5"/>
+  </g>
+  <!-- usure : fissures, trous et grains de sable -->
+  <g stroke="#56636f" stroke-width="0.6" fill="none">
+    <path d="M20 2.5 l2 2 l-1 2"/>
+    <path d="M36 27 l3 1 l1 2"/>
+    <path d="M4 35 l2 2.5"/>
+  </g>
+  <g fill="#66737f">
+    <circle cx="10" cy="19" r="0.8"/>
+    <circle cx="29" cy="12" r="0.6"/>
+    <circle cx="43" cy="44" r="0.9"/>
+    <circle cx="14" cy="45" r="0.5"/>
+    <circle cx="38" cy="4" r="0.6"/>
+  </g>
+</svg>
