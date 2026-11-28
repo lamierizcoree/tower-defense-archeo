@@ -18,6 +18,9 @@ var score := 0
 var kills := 0
 var levels_cleared := 0
 var victory := false
+var difficulty := 0                 # niveau de difficulté de l'expédition (voir data/difficulty.gd)
+var difficulty_unlocked_now := false  # cette expédition a débloqué un nouveau niveau
+var score_bonus := 0                # score ajouté par la difficulté à la fin
 var boss_killed := false            # le boss du niveau en cours a-t-il été tué ?
 var new_unlocks: Array[String] = []   # reliques débloquées au dernier niveau réussi
 var points_gained := 0               # points d'amélioration gagnés à la fin de l'expédition
@@ -28,8 +31,13 @@ var codex_return := "res://scenes/hub.tscn"   # écran où revenir en quittant l
 func new_run() -> void:
 	rng.randomize()
 	started = true
+	difficulty = Profile.difficulty
+	difficulty_unlocked_now = false
+	score_bonus = 0
 	biome_index = 0
 	lives = START_LIVES + Profile.bonus_lives()
+	if Difficulty.has(difficulty, "vies"):
+		lives = maxi(1, lives - Difficulty.LIVES_MALUS)
 	jokers.clear()
 	relics.clear()
 	if Profile.starting_relic():
@@ -104,6 +112,8 @@ func level_lost() -> void:
 func _finish() -> void:
 	finished = true
 	started = false
+	score_bonus = roundi(score * (Difficulty.score_mult(difficulty) - 1.0))
+	score += score_bonus
 	points_gained = Profile.run_finished(score, victory)
 
 

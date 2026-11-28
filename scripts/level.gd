@@ -64,7 +64,10 @@ func _ready() -> void:
 	layout = Levels.get_layout(node["layout"])
 	_load_layout()
 	waves = Levels.make_waves(Run.rng, Run.biome_index, Run.current.x, node["type"])
+	_apply_difficulty_to_waves()
 	gold = 70 + 5 * (Run.biome_index * 5 + Run.current.x)
+	if Difficulty.active("bourse"):
+		gold = int(gold * Difficulty.START_GOLD)
 	if Run.has_joker("rempart"):
 		Run.lives += 2
 	_shift_dunes()
@@ -159,13 +162,41 @@ func _is_storm(index: int) -> bool:
 	return biome["id"] == "desert" and index % 2 == 1
 
 
+## Difficulté : transforme certains ennemis en élites et ajoute l'escorte du boss.
+## Un élite est noté avec une étoile devant son type : "*eclaireur".
+func _apply_difficulty_to_waves() -> void:
+	for w in waves:
+		var list: Array = w["enemies"]
+		if Difficulty.active("elites"):
+			var n := int(round(list.size() * Difficulty.ELITE_SHARE))
+			var candidates := []
+			for i in list.size():
+				if not EnemyTypes.get_type(list[i]).get("boss", false):
+					candidates.append(i)
+			for k in mini(n, candidates.size()):
+				var pick: int = candidates.pop_at(Run.rng.randi_range(0, candidates.size() - 1))
+				list[pick] = "*" + list[pick]
+		if Difficulty.active("escorte") and not list.is_empty() and EnemyTypes.get_type(base_type(list.back())).get("boss", false):
+			for k in Difficulty.BOSS_ESCORT:
+				list.insert(list.size() - 1, "*colosse")
+
+
+## Type d'ennemi sans l'étoile des élites.
+static func base_type(t: String) -> String:
+	return t.trim_prefix("*")
+
+
 func _spawn_enemy(type_id: String) -> void:
 	var start := spawns[spawn_turn % spawns.size()]
 	spawn_turn += 1
 	var speed_mult: float = biome["enemy_speed"]
 	if wave_index == 0 and Run.has_joker("sablier"):
 		speed_mult *= 0.7
-	_add_enemy(type_id, start, enemy_hp_mult(wave_index), speed_mult)
+	if Difficulty.active("vitesse"):
+		speed_mult *= Difficulty.SPEED_BONUS
+	var e := _add_enemy(base_type(type_id), start, enemy_hp_mult(wave_index), speed_mult)
+	if type_id.begins_with("*"):
+		e.make_elite(Difficulty.ELITE_HP)
 
 
 func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: float) -> Enemy:
@@ -175,6 +206,8 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 	e.ice = ice
 	e.walls = walls
 	e.venin = Run.has_joker("venin")
+	if Difficulty.active("regen"):
+		e.regen = Difficulty.REGEN
 	e.died.connect(_on_enemy_died)
 	e.reached_goal.connect(_on_enemy_reached_goal)
 	enemies.append(e)
@@ -183,8 +216,11 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 
 
 func _on_enemy_died(e: Enemy) -> void:
-	earn(e.data.get("gold", KILL_REWARD) + (2 if Run.has_joker("prime") else 0))
-	Run.score += e.data["score"]
+	var reward: int = e.data.get("gold", KILL_REWARD) * (2 if e.elite else 1)
+	if Difficulty.active("maigre_butin"):
+		reward = maxi(1, reward - 1)
+	earn(reward + (2 if Run.has_joker("prime") else 0))
+	Run.score += e.data["score"] * (3 if e.elite else 1)
 	Run.kills += 1
 	if e.is_boss():
 		Run.boss_killed = true
@@ -202,7 +238,7 @@ func _on_enemy_reached_goal(e: Enemy) -> void:
 	_remove_enemy(e)
 	if ended:
 		return
-	Run.lives -= e.data["damage"]
+	Run.lives -= e.lives_cost()
 	if Run.has_joker("pillard"):
 		earn(6)
 	if Run.lives <= 0:
@@ -220,7 +256,7 @@ func _split(e: Enemy, where: Vector2) -> void:
 	var child_id: String = e.data.get("splits", "")
 	if child_id == "" or ended:
 		return
-	var hp_mult: float = e.max_hp / e.data["hp"]
+	var hp_mult: float = e.hp_mult  # les larves d'une jarre élite ne sont pas élites
 	var speed_mult: float = e.speed / e.data["speed"]
 	var n: int = e.data.get("split_count", 3)
 	for i in n:
@@ -319,7 +355,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func wall_cost() -> int:
 	if free_walls_left() > 0:
 		return 0
-	return 1 if Run.has_joker("briques") else WALL_COST
+	if Run.has_joker("briques"):
+		return 1
+	return Difficulty.WALL_COST if Difficulty.active("murs_chers") else WALL_COST
 
 
 ## Murs gratuits restants dans ce niveau (joker Architecte fou).
@@ -366,6 +404,9 @@ func _try_place_wall(cell: Vector2i) -> void:
 		return
 	if rocks.has(cell) or dunes.has(cell) or cell in spawns or cell == goal:
 		_say("Impossible de construire ici")
+		return
+	if Difficulty.active("carriere") and walls.size() >= Difficulty.WALL_LIMIT:
+		_say("Carrière épuisée : %d murs au maximum" % Difficulty.WALL_LIMIT)
 		return
 	if gold < wall_cost():
 		_say("Pas assez d'or")
@@ -665,6 +706,8 @@ func _draw() -> void:
 func _draw_hud(font: Font) -> void:
 	var type_names := {"combat": "", "elite": "  ·  ÉLITE", "boss": "  ·  BOSS"}
 	var title := "%s · %s%s" % [biome["name"], layout["name"], type_names[node["type"]]]
+	if Run.difficulty > 0:
+		title += "  ·  D%d" % Run.difficulty
 	draw_string(font, Vector2(12, 24), title, HORIZONTAL_ALIGNMENT_LEFT, 470, 17, Color.WHITE)
 	var stats := "Vies %d    Or %d    Vague %d/%d" % [Run.lives, gold, wave_index + 1, waves.size()]
 	if Engine.time_scale > 1.0:
@@ -694,9 +737,17 @@ func _describe_wave(index: int) -> String:
 		counts[t] = counts.get(t, 0) + 1
 	var parts := []
 	for t in counts:
-		var d := EnemyTypes.get_type(t)
-		parts.append("%d %s" % [counts[t], d["name"] if counts[t] == 1 else d["plural"]])
+		parts.append(_enemy_count_name(t, counts[t]))
 	return ", ".join(parts)
+
+
+## « 3 éclaireurs », « 1 colosse élite », « 2 colosses élites ».
+func _enemy_count_name(t: String, n: int) -> String:
+	var d := EnemyTypes.get_type(base_type(t))
+	var s := "%d %s" % [n, d["name"] if n == 1 else d["plural"]]
+	if t.begins_with("*"):
+		s += " élite" if n == 1 else " élites"
+	return s
 
 
 ## Barre du bas : les choix de construction, avec leur touche et leur prix.
@@ -723,6 +774,8 @@ func _draw_build_bar(font: Font) -> void:
 		var price := "%d or" % cost
 		if id == "" and free_walls_left() > 0:
 			price = "gratuit (%d)" % free_walls_left()
+		if id == "" and Difficulty.active("carriere"):
+			price += "  ·  %d/%d" % [walls.size(), Difficulty.WALL_LIMIT]
 		draw_string(font, r.position + Vector2(28, 34), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
 
 
@@ -869,6 +922,8 @@ func _tower_panel(id: String, t: Tower) -> Array:
 			lines.append(_line("Tours à portée : +%d %% de cadence" % roundi(buff * 100)))
 			if Run.has_joker("ancetres"):
 				lines.append(_line("Totems ancestraux : les bonus se cumulent", 13, Color("ffd54a")))
+	if t and t.rivalry():
+		lines.append(_line("Rivalité des ateliers : cadence -%d %%" % roundi((1.0 - Difficulty.RIVALRY_RATE) * 100), 13, Color("ff8a5c")))
 	if t and t.pack_bonus() > 0.0:
 		lines.append(_line("Esprit de meute : +%d %% de cadence" % roundi(t.pack_bonus() * 100), 13, Relics.RARITY_COLORS["legendaire"]))
 	if t and t.legendary("only_slowed", false):
@@ -947,13 +1002,18 @@ func _wave_panel(index: int) -> Array:
 		lines.append(_line("Tempête de sable : portée des tours -25 %", 13, Color("e0b070")))
 	if index == 0 and Run.has_joker("sablier"):
 		lines.append(_line("Sablier ancien : ennemis 30 % plus lents", 13, Color("ffd54a")))
+	if Difficulty.active("vitesse"):
+		speed_mult *= Difficulty.SPEED_BONUS
 	for t in order:
-		var d := EnemyTypes.get_type(t)
+		var d := EnemyTypes.get_type(base_type(t))
 		var n: int = counts[t]
-		var hp := roundi(d["hp"] * hp_mult)
+		var elite: bool = t.begins_with("*")
+		var hp := roundi(d["hp"] * hp_mult * (Difficulty.ELITE_HP if elite else 1.0))
 		var speed: float = d["speed"] * speed_mult / Grid.CELL
-		lines.append(_line("%d × %s" % [n, d["name"] if n == 1 else d["plural"]], 15, d["color"].lightened(0.35)))
-		lines.append(_line("    PV %d  ·  vitesse %s cases/s  ·  -%d vie%s" % [hp, _num(speed), d["damage"], "s" if d["damage"] > 1 else ""]))
+		var lost: int = d["damage"] + (1 if elite else 0)
+		var label: String = (d["name"] if n == 1 else d["plural"]) + ((" élite" if n == 1 else " élites") if elite else "")
+		lines.append(_line("%d × %s" % [n, label], 15, Color("ffd54a") if elite else d["color"].lightened(0.35)))
+		lines.append(_line("    PV %d  ·  vitesse %s cases/s  ·  -%d vie%s" % [hp, _num(speed), lost, "s" if lost > 1 else ""]))
 		lines.append(_line("    " + d["ability"], 13, Color(1, 1, 1, 0.6)))
 		if d.has("splits"):
 			var c := EnemyTypes.get_type(d["splits"])
@@ -961,14 +1021,19 @@ func _wave_panel(index: int) -> Array:
 			lines.append(_line("    puis %d × %s : PV %d  ·  vitesse %s cases/s" % [d["split_count"], c["plural"], roundi(c["hp"] * hp_mult), _num(c_speed)], 13, c["color"]))
 	if not ice.is_empty():
 		lines.append(_line("Sur la glace, tous les ennemis vont 2 fois plus vite", 13, Color("9fd3ea")))
+	if Run.difficulty > 0:
+		lines.append(_line("%s : %d règle%s active%s (voir le camp de base)" % [Difficulty.name_of(Run.difficulty), Run.difficulty, "s" if Run.difficulty > 1 else "", "s" if Run.difficulty > 1 else ""], 13, Color("ff8a5c")))
 	return lines
 
 
 func _enemy_panel(e: Enemy) -> Array:
 	var d := e.data
-	var lines := [_line(d["name"].capitalize() if not e.is_boss() else d["name"], 16, Color.WHITE)]
+	var title: String = d["name"].capitalize() if not e.is_boss() else d["name"]
+	if e.elite:
+		title += " élite"
+	var lines := [_line(title, 16, Color("ffd54a") if e.elite else Color.WHITE)]
 	lines.append(_line("PV %d / %d" % [ceili(e.hp), roundi(e.max_hp)]))
-	lines.append(_line("Vitesse %s cases/s  ·  -%d vie%s" % [_num(e.speed / Grid.CELL), d["damage"], "s" if d["damage"] > 1 else ""]))
+	lines.append(_line("Vitesse %s cases/s  ·  -%d vie%s" % [_num(e.speed / Grid.CELL), e.lives_cost(), "s" if e.lives_cost() > 1 else ""]))
 	lines.append(_line(d["ability"], 13, Color(1, 1, 1, 0.6)))
 	if e.slow_time > 0.0:
 		lines.append(_line("Ralenti (%s s)" % _num(e.slow_time), 13, Color("7fd6e8")))

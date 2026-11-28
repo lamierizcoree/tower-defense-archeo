@@ -24,6 +24,9 @@ var slow_time := 0.0
 var poison_dps := 0.0        # dégâts par seconde
 var poison_time := 0.0
 var venin := false           # joker « Venin glacé »
+var hp_mult := 1.0           # multiplicateur de PV de la vague (sans le bonus d'élite)
+var elite := false           # difficulté « Élites errants » : plus de PV, coûte 1 vie de plus
+var regen := 0.0             # difficulté « Chair maudite » : part des PV regagnée par seconde
 
 
 func setup(id: String, grid_astar: AStarGrid2D, start: Vector2i, goal_cell: Vector2i, hp_mult: float, speed_mult: float) -> void:
@@ -31,12 +34,25 @@ func setup(id: String, grid_astar: AStarGrid2D, start: Vector2i, goal_cell: Vect
 	data = EnemyTypes.get_type(id)
 	astar = grid_astar
 	goal = goal_cell
+	self.hp_mult = hp_mult
 	max_hp = data["hp"] * hp_mult
 	hp = max_hp
 	speed = data["speed"] * speed_mult
 	next_cell = start
 	position = Grid.cell_to_world(start)
 	repath()
+
+
+## Transforme l'ennemi en élite (difficulté).
+func make_elite(hp_factor: float) -> void:
+	elite = true
+	max_hp *= hp_factor
+	hp = max_hp
+
+
+## Vies perdues si l'ennemi atteint la sortie.
+func lives_cost() -> int:
+	return int(data["damage"]) + (1 if elite else 0)
 
 
 func digs() -> bool:
@@ -90,6 +106,8 @@ func _update_effects(delta: float) -> void:
 		take_damage(dps * delta)
 		if poison_time <= 0.0:
 			poison_dps = 0.0
+	elif regen > 0.0 and hp < max_hp:
+		hp = minf(max_hp, hp + max_hp * regen * delta)
 
 
 func take_damage(amount: float) -> void:
@@ -175,6 +193,8 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r, body)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, edge, 2.0)
 
+	if elite:
+		draw_arc(Vector2.ZERO, r + 6, 0.0, TAU, 28, Color("ffd54a"), 2.5)
 	if slow_time > 0.0:
 		draw_arc(Vector2.ZERO, r + 3, 0.0, TAU, 24, Color("7fd6e8"), 3.0)
 
