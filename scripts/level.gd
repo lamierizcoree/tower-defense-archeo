@@ -200,7 +200,7 @@ func _apply_difficulty_to_waves() -> void:
 			var n := int(round(list.size() * Difficulty.ELITE_SHARE))
 			var candidates := []
 			for i in list.size():
-				if not EnemyTypes.get_type(list[i]).get("boss", false):
+				if not list[i].begins_with("*") and not EnemyTypes.get_type(list[i]).get("boss", false):
 					candidates.append(i)
 			for k in mini(n, candidates.size()):
 				var pick: int = candidates.pop_at(Run.rng.randi_range(0, candidates.size() - 1))
