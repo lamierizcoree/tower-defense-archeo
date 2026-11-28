@@ -162,3 +162,41 @@ static func synergy_tip(canvas: CanvasItem, held: Array, mouse: Vector2) -> void
 	for k in lines.size():
 		canvas.draw_multiline_string(font, Vector2(r.position.x + 12, y + lines[k][1]), lines[k][0], HORIZONTAL_ALIGNMENT_LEFT, W - 24, lines[k][1], -1, lines[k][2])
 		y += heights[k] + 3.0
+
+
+## Petite carte du deck (atelier de cartes, camp de base) : nom, type, prix, niveau d'amélioration.
+static func deck_card(canvas: CanvasItem, r: Rect2, id: String, lvl: int, hot: bool, chosen: bool, dim := false) -> void:
+	var font := ThemeDB.fallback_font
+	var c := Cards.get_card(id)
+	var color := Cards.color_of(id)
+	var a := 0.4 if dim else 1.0
+	canvas.draw_rect(r, Color(1, 1, 1, 0.16 if hot or chosen else 0.07))
+	canvas.draw_rect(Rect2(r.position, Vector2(5, r.size.y)), Color(color, a))
+	canvas.draw_rect(r, Color("ffe066") if chosen else Color(color, 0.6 * a), false, 3.0 if chosen else (2.0 if hot else 1.0))
+	if c["kind"] == "tower":
+		TowerArt.draw_icon(canvas, c["tower"], r.position + Vector2(26, r.size.y / 2), 34.0)
+	else:
+		card_symbol(canvas, c["kind"], r.position + Vector2(26, r.size.y / 2), Color(color, a))
+	canvas.draw_string(font, r.position + Vector2(48, 22), c["name"], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 52, 14, Color(1, 1, 1, a))
+	canvas.draw_string(font, r.position + Vector2(48, 40), Cards.KINDS[c["kind"]]["name"], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 52, 11, Color(color, a))
+	canvas.draw_string(font, r.position + Vector2(48, r.size.y - 10), "%d or" % Cards.base_cost(id, lvl), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.88, 0.4, a))
+	var stars := "★".repeat(lvl) + "☆".repeat(Cards.MAX_LEVEL - lvl)
+	canvas.draw_string(font, Vector2(r.end.x - 40, r.end.y - 10), stars, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 0.84, 0.29, a))
+
+
+## Petit symbole pour les cartes sans tour.
+static func card_symbol(canvas: CanvasItem, kind: String, at: Vector2, color: Color) -> void:
+	match kind:
+		"walls":
+			for k in 3:
+				canvas.draw_rect(Rect2(at + Vector2(-12 + (k % 2) * 6, 2 - k * 7), Vector2(18, 6)), color.lightened(0.15 * k))
+		"trap":
+			for k in 3:
+				var p := at + Vector2(-8 + k * 8, 6)
+				canvas.draw_colored_polygon(PackedVector2Array([p + Vector2(-4, 4), p + Vector2(0, -10), p + Vector2(4, 4)]), color)
+		"curse":
+			canvas.draw_circle(at, 10.0, color)
+			canvas.draw_circle(at + Vector2(-4, -2), 2.5, Color(0.1, 0.05, 0.15))
+			canvas.draw_circle(at + Vector2(4, -2), 2.5, Color(0.1, 0.05, 0.15))
+		"boost":
+			canvas.draw_colored_polygon(PackedVector2Array([at + Vector2(0, -12), at + Vector2(9, 2), at + Vector2(3, 2), at + Vector2(3, 11), at + Vector2(-3, 11), at + Vector2(-3, 2), at + Vector2(-9, 2)]), color)

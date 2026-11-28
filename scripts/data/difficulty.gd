@@ -12,7 +12,7 @@ const SCORE_PER_LEVEL := 0.15   # +15 % de score par niveau
 const ELITE_SHARE := 0.1        # Élites errants : 1 ennemi sur 10 devient élite
 const ELITE_HP := 2.5           # ... avec 2,5 fois plus de PV
 const SPEED_BONUS := 1.1        # Vents contraires : ennemis +10 % de vitesse
-const WALL_COST := 3            # Fouilles coûteuses : un mur coûte 3 or au lieu de 2
+const WALL_CARD_EXTRA := 2      # Fouilles coûteuses : les cartes de murs coûtent 2 or de plus
 const RIVALRY_FROM := 3         # Rivalité : à partir de la 3e tour identique...
 const RIVALRY_RATE := 0.8       # ... ces tours tirent 20 % moins vite
 const START_GOLD := 0.75        # Bourse maigre : -25 % d'or au début de chaque niveau
@@ -28,7 +28,7 @@ const RULES := [
 	{"id": "vitesse", "name": "Vents contraires",
 		"desc": "Tous les ennemis vont 10 % plus vite."},
 	{"id": "murs_chers", "name": "Fouilles coûteuses",
-		"desc": "Les murs coûtent 3 or au lieu de 2."},
+		"desc": "Les cartes de murs coûtent 2 or de plus."},
 	{"id": "rivalite", "name": "Rivalité des ateliers",
 		"desc": "À partir de 3 tours identiques, ces tours tirent 20 % moins vite."},
 	{"id": "bourse", "name": "Bourse maigre",

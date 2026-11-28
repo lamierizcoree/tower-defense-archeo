@@ -2,18 +2,17 @@ extends Node2D
 ## Un niveau : la grille, les murs, les vagues et l'interface.
 ##
 ## Contrôles :
-##   Clic gauche  : poser (un mur, ou une tour sur un mur)
-##   Clic droit   : retirer une tour, sinon un mur
+##   Clic gauche  : poser un mur, ou jouer la carte choisie (tour sur un mur, piège sur une case libre)
+##   Clic droit   : retirer une tour, sinon un mur (le mur revient dans la réserve)
 ##   1            : mode Mur
-##   2 à 7        : choisir une tour (voir tower_types.gd)
+##   2 à 9, 0     : choisir ou jouer une carte de la main (voir data/cards.gd)
 ##   Espace       : lancer la vague suivante
 ##   F            : vitesse x2
 ##   E            : tourner une tour qui porte la Lance du Pharaon (au survol)
-##   Barre du bas  : cliquer une relique, puis une tour, pour l'y poser
+##   Barre du bas  : la main de cartes ; cliquer une relique, puis une tour, pour l'y poser
 ##   Boutons en haut à droite : lancer la vague, vitesse x2 (pour le tactile)
 ##   Tactile : appui long = clic droit (voir touch.gd)
 
-const WALL_COST := 2
 const KILL_REWARD := 3
 const WAVE_BONUS := 10
 const SPAWN_INTERVAL := 0.7
@@ -52,11 +51,18 @@ var storm := false
 
 var gold := 0
 var gold_rest := 0.0   # morceaux d'or pas encore entiers (voir earn)
-var wall_paid := {}    # Vector2i -> or payé pour ce mur (rendu s'il est retiré)
 var leaks := 0          # ennemis qui se sont échappés dans ce niveau (mission « aucune fuite »)
 var upgrade_cell := Vector2i(-1, -1)  # tour dont le menu d'amélioration est ouvert
-var free_walls_used := 0  # murs gratuits déjà posés (joker Architecte fou)
-var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
+var walls_left := 0     # murs encore à poser (Cards.BASE_WALLS au début, plus les cartes de murs)
+
+# Deck de cartes : on garde des index dans Run.deck
+var draw_pile: Array = []
+var hand: Array = []
+var discard: Array = []
+var selected_card := -1   # index dans hand de la carte à poser (tour ou piège), -1 = mode Mur
+var traps := {}           # Vector2i -> {"id", "lvl", "waves", "hit": {id d'ennemi: true}}
+var effects: Array = []   # malus et bonus en cours : {"id", "lvl", "waves"}
+var card_fx := {"speed": 1.0, "vulnerable": 0.0}   # malus des ennemis, partagé avec eux
 var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
 var ended := false
 var message := ""
@@ -89,9 +95,11 @@ func _ready() -> void:
 		Run.lives += 2
 	if Run.has_family("marchands", 2):
 		gold += Jokers.MARCHANDS_GOLD
+	walls_left = Cards.BASE_WALLS + (Jokers.ARCHITECTE_WALLS if Run.has_joker("architecte") else 0)
+	_setup_deck()
 	_shift_dunes()
 	_refresh_paths()
-	_say("Construis ton labyrinthe, puis lance la vague")
+	_say("Joue tes cartes, puis lance la vague")
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	overlay = Node2D.new()
@@ -139,6 +147,7 @@ func _process(delta: float) -> void:
 				spawn_timer = SPAWN_INTERVAL
 		elif enemies.is_empty():
 			_end_wave()
+		_check_traps()
 	queue_redraw()
 	overlay.queue_redraw()
 
@@ -183,8 +192,10 @@ func _end_wave() -> void:
 		_make_summary(kept)
 		return
 	earn(WAVE_BONUS)
+	_tick_cards()
 	_shift_dunes()
-	_say("Vague terminée ! +%d or" % WAVE_BONUS)
+	var drawn := _draw_cards(Cards.DRAW_PER_WAVE)
+	_say("Vague terminée ! +%d or, %d carte%s piochée%s" % [WAVE_BONUS, drawn, "s" if drawn > 1 else "", "s" if drawn > 1 else ""])
 
 
 func _is_storm(index: int) -> bool:
@@ -238,6 +249,7 @@ func _add_enemy(type_id: String, start: Vector2i, hp_mult: float, speed_mult: fl
 	e.alchemy = Run.has_family("alchimistes", 3)
 	e.others = enemies
 	e.towers = towers
+	e.card_fx = card_fx
 	e.phase_changed.connect(_on_boss_phase)
 	if Difficulty.active("regen"):
 		e.regen = Difficulty.REGEN
@@ -351,7 +363,7 @@ func _shift_dunes() -> void:
 
 ## Case vide : ni mur, ni rocher, ni dune, ni entrée, ni sortie.
 func _is_free(cell: Vector2i) -> bool:
-	return not (walls.has(cell) or rocks.has(cell) or dunes.has(cell) or cell in spawns or cell == goal)
+	return not (walls.has(cell) or rocks.has(cell) or dunes.has(cell) or traps.has(cell) or cell in spawns or cell == goal)
 
 
 # --- Construction ------------------------------------------------------------
@@ -368,7 +380,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_1:
-				selected = ""
+				selected_card = -1
 				selected_relic = -1
 			KEY_E:
 				var hover := Grid.world_to_cell(get_global_mouse_position())
@@ -384,10 +396,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				upgrade_cell = Vector2i(-1, -1)
 			KEY_F:
 				Engine.time_scale = 2.0 if Engine.time_scale == 1.0 else 1.0
-		for id in TowerTypes.ORDER:
-			if event.keycode == TowerTypes.get_type(id)["key"]:
-				selected = id
-				selected_relic = -1
+		var keys := [KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0]
+		var k := keys.find(event.keycode)
+		if k >= 0 and not ended:
+			_click_card(k)
 		return
 
 	if ended:
@@ -410,10 +422,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 			upgrade_cell = Vector2i(-1, -1)
 			return
-		var bar_slot := _build_bar_slot(pos)
+		var bar_slot := _hand_slot(pos)
 		if bar_slot >= 0:
-			selected = "" if bar_slot == 0 else TowerTypes.ORDER[bar_slot - 1]
-			selected_relic = -1
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if bar_slot == 0:
+					selected_card = -1
+					selected_relic = -1
+				else:
+					_click_card(bar_slot - 1)
 			return
 		var relic_slot := _relic_bar_slot(pos)
 		if relic_slot >= 0:
@@ -427,30 +443,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				_try_socket(cell, selected_relic)
 			elif towers.has(cell):
 				upgrade_cell = cell  # clic sur une tour : menu d'amélioration
-			elif selected == "":
+			elif selected_card < 0:
 				_try_place_wall(cell)
+			elif Cards.kind_of(_card_id(selected_card)) == "tower":
+				_try_place_tower(cell, selected_card)
 			else:
-				_try_place_tower(cell, selected)
+				_try_place_trap(cell, selected_card)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			if selected_relic >= 0:
 				selected_relic = -1  # le clic droit annule la relique choisie
+			elif selected_card >= 0:
+				selected_card = -1   # ... et la carte choisie
 			else:
 				_remove_at(cell)
-
-
-func wall_cost() -> int:
-	if free_walls_left() > 0:
-		return 0
-	if Run.has_joker("briques"):
-		return 1
-	return Difficulty.WALL_COST if Difficulty.active("murs_chers") else WALL_COST
-
-
-## Murs gratuits restants dans ce niveau (joker Architecte fou).
-func free_walls_left() -> int:
-	if not Run.has_joker("architecte"):
-		return 0
-	return maxi(0, Jokers.ARCHITECTE_FREE_WALLS - free_walls_used)
 
 
 func tower_cost(id: String) -> int:
@@ -492,14 +497,17 @@ func _try_place_wall(cell: Vector2i) -> void:
 	if rocks.has(cell) or dunes.has(cell) or cell in spawns or cell == goal:
 		_say("Impossible de construire ici")
 		return
+	if traps.has(cell):
+		_say("Un piège occupe cette case")
+		return
 	if walls.size() >= _mission_limit("max_walls"):
 		_say("Mission : %d murs au maximum" % _mission_limit("max_walls"))
 		return
 	if Difficulty.active("carriere") and walls.size() >= Difficulty.WALL_LIMIT:
 		_say("Carrière épuisée : %d murs au maximum" % Difficulty.WALL_LIMIT)
 		return
-	if gold < wall_cost():
-		_say("Pas assez d'or")
+	if walls_left <= 0:
+		_say("Plus de murs : joue une carte de murs")
 		return
 	if _cell_has_enemy(cell):
 		_say("Un ennemi est sur cette case")
@@ -513,34 +521,53 @@ func _try_place_wall(cell: Vector2i) -> void:
 		return
 
 	walls[cell] = true  # les fouisseurs l'ignorent : pour eux, un mur compte comme du sable
-	var cost := wall_cost()
-	if cost == 0:
-		free_walls_used += 1
-	wall_paid[cell] = cost
-	gold -= cost
+	walls_left -= 1
 	_on_grid_changed()
 
 
-func _try_place_tower(cell: Vector2i, id: String) -> void:
+## Pose la tour d'une carte de la main sur un mur.
+func _try_place_tower(cell: Vector2i, slot: int) -> void:
 	if not walls.has(cell):
 		_say("Une tour se pose sur un mur")
 		return
 	if towers.has(cell):
 		_say("Il y a déjà une tour ici")
 		return
-	var cost := tower_cost(id)
+	var card: Dictionary = Run.deck[hand[slot]]
+	var id: String = Cards.get_card(card["id"])["tower"]
+	var cost := card_cost(hand[slot])
 	if towers.size() >= _mission_limit("max_towers"):
 		_say("Mission : %d tours au maximum" % _mission_limit("max_towers"))
 		return
 	if gold < cost:
-		_say("Pas assez d'or")
+		_say("Pas assez d'or (%d)" % cost)
 		return
 	var t := Tower.new()
 	t.setup(id, self, cell)
+	if card["lvl"] >= 2:
+		t.tier = 2  # carte améliorée 2 fois : la tour arrive au niveau 2
 	towers[cell] = t
 	add_child(t)
 	gold -= cost
 	t.spent = cost
+	_discard_card(slot)
+
+
+## Pose le piège d'une carte de la main sur une case libre (pas sur un mur).
+func _try_place_trap(cell: Vector2i, slot: int) -> void:
+	if not _is_free(cell):
+		_say("Un piège se pose sur une case libre")
+		return
+	var index: int = hand[slot]
+	var cost := card_cost(index)
+	if gold < cost:
+		_say("Pas assez d'or (%d)" % cost)
+		return
+	gold -= cost
+	var card: Dictionary = Run.deck[index]
+	traps[cell] = {"id": card["id"], "lvl": card["lvl"], "waves": Cards.waves_of(card["id"], card["lvl"]), "hit": {}}
+	_say("%s posé" % Cards.get_card(card["id"])["name"])
+	_discard_card(slot)
 
 
 # --- Amélioration des tours --------------------------------------------------
@@ -668,12 +695,344 @@ func _remove_at(cell: Vector2i) -> void:
 		astar.set_point_solid(cell, false)
 		dig_astar.set_point_solid(cell, false)
 		sealed.erase(cell)
-		var paid: int = wall_paid.get(cell, wall_cost())
-		if paid == 0 and free_walls_used > 0:
-			free_walls_used -= 1  # le mur gratuit peut être reposé ailleurs
-		gold += paid
-		wall_paid.erase(cell)
+		walls_left += 1  # le mur revient dans la réserve
 		_on_grid_changed()
+
+
+# --- Cartes ------------------------------------------------------------------
+
+## Début du niveau : tout le deck est mélangé dans la pioche, puis on pioche la main de départ,
+## qui contient toujours au moins une carte de tour et une carte de murs.
+func _setup_deck() -> void:
+	draw_pile = range(Run.deck.size())
+	_shuffle(draw_pile)
+	_draw_cards(Cards.DRAW_START)
+	_force_kind("tower", "walls")
+	_force_kind("walls", "tower")
+
+
+## Mélange avec le générateur de l'expédition.
+func _shuffle(list: Array) -> void:
+	for i in range(list.size() - 1, 0, -1):
+		var j := Run.rng.randi_range(0, i)
+		var tmp = list[i]
+		list[i] = list[j]
+		list[j] = tmp
+
+
+## Pioche n cartes. Pioche vide : la défausse est remélangée. Main pleine : la carte va à la défausse.
+## Renvoie le nombre de cartes ajoutées à la main.
+func _draw_cards(n: int) -> int:
+	var added := 0
+	for i in n:
+		if draw_pile.is_empty():
+			if discard.is_empty():
+				break
+			draw_pile = discard
+			discard = []
+			_shuffle(draw_pile)
+		var c: int = draw_pile.pop_back()
+		if hand.size() >= Cards.HAND_MAX:
+			discard.append(c)
+		else:
+			hand.append(c)
+			added += 1
+	return added
+
+
+func _hand_count(kind: String) -> int:
+	var n := 0
+	for c in hand:
+		if Cards.kind_of(Run.deck[c]["id"]) == kind:
+			n += 1
+	return n
+
+
+## S'il n'y a aucune carte de ce type en main, on en échange une avec la pioche,
+## sans retirer la seule carte de l'autre type obligatoire (keep).
+func _force_kind(kind: String, keep: String) -> void:
+	if _hand_count(kind) > 0:
+		return
+	var j := -1
+	for k in draw_pile.size():
+		if Cards.kind_of(Run.deck[draw_pile[k]]["id"]) == kind:
+			j = k
+			break
+	if j < 0:
+		return
+	var swap_out := -1
+	for k in range(hand.size() - 1, -1, -1):
+		if Cards.kind_of(Run.deck[hand[k]]["id"]) != keep or _hand_count(keep) > 1:
+			swap_out = k
+			break
+	var incoming: int = draw_pile.pop_at(j)
+	if swap_out < 0:
+		hand.append(incoming)
+		return
+	var outgoing: int = hand[swap_out]
+	hand[swap_out] = incoming
+	draw_pile.insert(Run.rng.randi_range(0, draw_pile.size()), outgoing)
+
+
+func _card_id(slot: int) -> String:
+	return Run.deck[hand[slot]]["id"]
+
+
+## Tour de la carte choisie ("" si aucune carte de tour n'est choisie).
+func _selected_tower() -> String:
+	if selected_card < 0 or selected_card >= hand.size():
+		return ""
+	var c := Cards.get_card(_card_id(selected_card))
+	return c.get("tower", "")
+
+
+## Prix en or d'une carte du deck (jokers et difficulté compris).
+func card_cost(deck_index: int) -> int:
+	var card: Dictionary = Run.deck[deck_index]
+	var cost := float(Cards.base_cost(card["id"], card["lvl"]))
+	match Cards.kind_of(card["id"]):
+		"tower":
+			if Run.has_joker("fondations"):
+				cost *= 0.75
+			if Run.has_joker("architecte"):
+				cost *= Jokers.ARCHITECTE_TOWER
+		"walls":
+			if Difficulty.active("murs_chers"):
+				cost += Difficulty.WALL_CARD_EXTRA
+	return int(ceil(cost))
+
+
+## Clic sur une carte de la main : les tours et les pièges se choisissent (puis se posent),
+## les autres cartes se jouent tout de suite.
+func _click_card(slot: int) -> void:
+	if slot >= hand.size():
+		return
+	selected_relic = -1
+	upgrade_cell = Vector2i(-1, -1)
+	var id := _card_id(slot)
+	var kind := Cards.kind_of(id)
+	if kind == "tower" or kind == "trap":
+		selected_card = -1 if selected_card == slot else slot
+		return
+	var index: int = hand[slot]
+	var cost := card_cost(index)
+	if gold < cost:
+		_say("Pas assez d'or (%d)" % cost)
+		return
+	gold -= cost
+	var lvl: int = Run.deck[index]["lvl"]
+	var c := Cards.get_card(id)
+	match kind:
+		"walls":
+			var n: int = c["walls"][lvl] + (Jokers.BRIQUES_WALLS if Run.has_joker("briques") else 0)
+			walls_left += n
+			_say("+%d murs" % n)
+		_:
+			effects.append({"id": id, "lvl": lvl, "waves": Cards.waves_of(id, lvl)})
+			_update_card_fx()
+			_say("%s : %s" % [c["name"], Cards.describe(id, lvl)], 3.5)
+	_discard_card(slot)
+
+
+## La carte jouée part dans la défausse.
+func _discard_card(slot: int) -> void:
+	discard.append(hand[slot])
+	hand.remove_at(slot)
+	if selected_card == slot:
+		selected_card = -1
+	elif selected_card > slot:
+		selected_card -= 1
+
+
+## Fin de vague : les effets et les pièges perdent une vague.
+func _tick_cards() -> void:
+	for fx in effects:
+		fx["waves"] -= 1
+	effects = effects.filter(func(fx): return fx["waves"] > 0)
+	for cell in traps.keys():
+		traps[cell]["waves"] -= 1
+		traps[cell]["hit"] = {}
+		if traps[cell]["waves"] <= 0:
+			traps.erase(cell)
+	_update_card_fx()
+
+
+## Malus des ennemis : les ralentissements se multiplient, les dégâts subis s'additionnent.
+func _update_card_fx() -> void:
+	var speed := 1.0
+	var vulnerable := 0.0
+	for fx in effects:
+		var c := Cards.get_card(fx["id"])
+		if c["kind"] != "curse":
+			continue
+		speed *= float(c.get("speed", 1.0))
+		vulnerable += float(c.get("vulnerable", 0.0))
+	card_fx["speed"] = speed
+	card_fx["vulnerable"] = vulnerable
+
+
+## Bonus de cadence des cartes en cours (Huile de lampe).
+func card_rate_bonus() -> float:
+	return _boost_sum("rate")
+
+
+## Bonus de dégâts des cartes en cours (Pierre à aiguiser).
+func card_damage_bonus() -> float:
+	return _boost_sum("damage")
+
+
+func _boost_sum(key: String) -> float:
+	var total := 0.0
+	for fx in effects:
+		var c := Cards.get_card(fx["id"])
+		if c["kind"] == "boost":
+			total += float(c.get(key, 0.0))
+	return total
+
+
+## Pièges : chaque ennemi qui marche dessus le déclenche une fois par vague. Les ibis volent au-dessus.
+func _check_traps() -> void:
+	if traps.is_empty():
+		return
+	for e in enemies.duplicate():
+		if not is_instance_valid(e) or e.dead or e.flies():
+			continue
+		var cell := Grid.world_to_cell(e.position)
+		if not traps.has(cell):
+			continue
+		var tr: Dictionary = traps[cell]
+		var key: int = e.get_instance_id()
+		if tr["hit"].has(key):
+			continue
+		tr["hit"][key] = true
+		var c := Cards.get_card(tr["id"])
+		if c.has("damage"):
+			e.take_damage(float(c["damage"][tr["lvl"]]) * Profile.damage_mult())
+		if c.has("slow"):
+			e.apply_slow(float(c["slow"]), float(c["slow_time"][tr["lvl"]]))
+
+
+func _draw_trap(font: Font, cell: Vector2i) -> void:
+	var tr: Dictionary = traps[cell]
+	var r := Grid.cell_rect(cell).grow(-6)
+	var center := r.get_center()
+	if tr["id"] == "pointes":
+		draw_rect(r, Color(0.2, 0.12, 0.08, 0.75))
+		for i in 3:
+			for j in 3:
+				var p := r.position + Vector2(6 + i * 12, 8 + j * 12)
+				draw_colored_polygon(PackedVector2Array([p + Vector2(-4, 4), p + Vector2(0, -5), p + Vector2(4, 4)]), Color("d8d0c0"))
+	else:
+		draw_circle(center, 15.0, Color(0.85, 0.55, 0.15, 0.75))
+		draw_circle(center + Vector2(-5, -4), 6.0, Color(1.0, 0.8, 0.4, 0.7))
+	draw_string(font, r.position + Vector2(r.size.x - 10, 12), str(tr["waves"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+
+
+## Barre du bas : la réserve de murs (case 0), puis les cartes de la main.
+func _draw_hand(font: Font) -> void:
+	var mouse := get_global_mouse_position()
+	# Réserve de murs, pioche et défausse
+	var r0 := _hand_rect(0)
+	var wall_mode := selected_card < 0 and selected_relic < 0
+	draw_rect(r0, Color(1, 1, 1, 0.15) if wall_mode else Color(1, 1, 1, 0.05))
+	if wall_mode:
+		draw_rect(r0, Color("ffe066"), false, 2.0)
+	var wr := Rect2(r0.position + Vector2(5, 9), Vector2(26, 22))
+	draw_texture_rect_region(Art.WALL_TEXTURES.get(biome["id"], Art.WALL_TEXTURES["desert"]), Rect2(wr.position, Vector2(26, 16)), Rect2(0, 0, 52, 32))
+	draw_rect(Rect2(wr.position + Vector2(0, 16), Vector2(26, 6)), Art.WALL_PALETTES.get(biome["id"], Art.WALL_PALETTES["desert"])["front"])
+	var wall_txt := "1 Murs : %d" % walls_left
+	draw_string(font, r0.position + Vector2(36, 17), wall_txt, HORIZONTAL_ALIGNMENT_LEFT, r0.size.x - 38, 13, Color.WHITE if walls_left > 0 else Color(1, 0.55, 0.45))
+	var pile_txt := "Pioche %d · Déf. %d" % [draw_pile.size(), discard.size()]
+	if not effects.is_empty():
+		pile_txt = "%d effet%s actif%s" % [effects.size(), "s" if effects.size() > 1 else "", "s" if effects.size() > 1 else ""]
+	draw_string(font, r0.position + Vector2(36, 33), pile_txt, HORIZONTAL_ALIGNMENT_LEFT, r0.size.x - 38, 10, Color(1, 1, 1, 0.6) if effects.is_empty() else Cards.KINDS["boost"]["color"])
+	# Cartes
+	var keys := ["2", "3", "4", "5", "6", "7", "8", "9", "0"]
+	for i in Cards.HAND_MAX:
+		var r := _hand_rect(i + 1)
+		if i >= hand.size():
+			draw_rect(r, Color(1, 1, 1, 0.025))
+			continue
+		var card: Dictionary = Run.deck[hand[i]]
+		var id: String = card["id"]
+		var c := Cards.get_card(id)
+		var color := Cards.color_of(id)
+		var cost := card_cost(hand[i])
+		var ok := gold >= cost
+		var active := i == selected_card
+		var hot := r.has_point(mouse)
+		draw_rect(r, Color(1, 1, 1, 0.16 if active or hot else 0.07))
+		draw_rect(Rect2(r.position, Vector2(4, r.size.y)), color)
+		draw_rect(r, Color("ffe066") if active else Color(color, 0.5), false, 2.0 if active else 1.0)
+		if c["kind"] == "tower":
+			TowerArt.draw_icon(self, c["tower"], r.position + Vector2(20, 22), 28.0)
+		else:
+			UI.card_symbol(self, c["kind"], r.position + Vector2(20, 22), color)
+		if not ok:
+			draw_rect(Rect2(r.position + Vector2(4, 0), Vector2(32, r.size.y)), Color(0.1, 0.1, 0.1, 0.55))
+		var text_color := Color.WHITE if ok else Color(1, 1, 1, 0.45)
+		draw_string(font, r.position + Vector2(7, 11), keys[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.6))
+		draw_string(font, r.position + Vector2(36, 16), Cards.short_name(id), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 38, 12, text_color)
+		var lvl_txt: String = "★".repeat(card["lvl"])
+		draw_string(font, r.position + Vector2(36, 33), "%d or" % cost, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffe066") if ok else Color(1, 0.5, 0.4))
+		if lvl_txt != "":
+			draw_string(font, r.position + Vector2(r.size.x - 26, 33), lvl_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("ffd54a"))
+
+
+## Case 0 : réserve de murs (plus large), puis une case par carte.
+func _hand_rect(i: int) -> Rect2:
+	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL
+	const FIRST := 132.0
+	if i == 0:
+		return Rect2(3, top + 4, FIRST - 6, 40)
+	var w := (Grid.SCREEN.x - FIRST) / Cards.HAND_MAX
+	return Rect2(FIRST + (i - 1) * w + 2, top + 4, w - 4, 40)
+
+
+func _hand_slot(pos: Vector2) -> int:
+	for i in Cards.HAND_MAX + 1:
+		if _hand_rect(i).has_point(pos):
+			return i
+	return -1
+
+
+## Fiche d'une carte de la main.
+func _card_panel(slot: int) -> Array:
+	if slot >= hand.size():
+		return [_line("Emplacement vide", 13, Color(1, 1, 1, 0.5)), _line("+%d cartes après chaque vague" % Cards.DRAW_PER_WAVE)]
+	var card: Dictionary = Run.deck[hand[slot]]
+	var id: String = card["id"]
+	var c := Cards.get_card(id)
+	var head: String = c["name"] + ("  " + "★".repeat(card["lvl"]) if card["lvl"] > 0 else "")
+	var lines := [_line(head, 17, Color.WHITE), _line("Carte %s" % Cards.KINDS[c["kind"]]["name"].to_lower(), 13, Cards.color_of(id))]
+	if c["kind"] == "tower":
+		lines.append_array(_tower_panel(c["tower"], null).slice(1))
+		if card["lvl"] >= 1:
+			lines.append(_line("Carte améliorée : 30 % moins chère" + (", arrive au niveau 2" if card["lvl"] >= 2 else ""), 13, Color("ffd54a")))
+		lines.append(_line("Prix : %d or  ·  choisis-la, puis clique sur un mur" % card_cost(hand[slot]), 13, Color("ffe066")))
+	else:
+		lines.append(_line(Cards.describe(id, card["lvl"])))
+		if c["kind"] == "walls" and Run.has_joker("briques"):
+			lines.append(_line("Briques creuses : +%d mur" % Jokers.BRIQUES_WALLS, 13, Color("ffd54a")))
+		var how := "choisis-la, puis clique sur une case libre" if c["kind"] == "trap" else "clique pour la jouer"
+		lines.append(_line("Prix : %d or  ·  %s" % [card_cost(hand[slot]), how], 13, Color("ffe066")))
+	return lines
+
+
+## Fiche de la réserve : murs, pioche, défausse et effets en cours.
+func _pile_panel() -> Array:
+	var lines := [_line("Murs à poser : %d" % walls_left, 17, Color.WHITE)]
+	lines.append(_line("%d murs au début du niveau, les cartes de murs en ajoutent" % (Cards.BASE_WALLS + (Jokers.ARCHITECTE_WALLS if Run.has_joker("architecte") else 0))))
+	lines.append(_line("Clic droit sur un mur : il revient dans la réserve", 13, Color(1, 1, 1, 0.6)))
+	lines.append(_line("Pioche : %d cartes  ·  défausse : %d  ·  deck : %d" % [draw_pile.size(), discard.size(), Run.deck.size()], 14, Color.WHITE))
+	lines.append(_line("+%d cartes après chaque vague ; pioche vide = défausse remélangée" % Cards.DRAW_PER_WAVE, 13, Color(1, 1, 1, 0.6)))
+	if not effects.is_empty():
+		lines.append(_line("Effets en cours", 14, Color.WHITE))
+		for fx in effects:
+			lines.append(_line("  • %s : %s (encore %d vague%s)" % [Cards.get_card(fx["id"])["name"], Cards.describe(fx["id"], fx["lvl"]).split(" pendant")[0], fx["waves"], "s" if fx["waves"] > 1 else ""], 13, Cards.color_of(fx["id"])))
+	if not traps.is_empty():
+		lines.append(_line("Pièges posés : %d" % traps.size(), 13, Cards.KINDS["trap"]["color"]))
+	return lines
 
 
 # --- Reliques ----------------------------------------------------------------
@@ -696,6 +1055,7 @@ func _click_relic(index: int) -> void:
 		_say("%s retirée" % Relics.get_relic(Run.relics[index])["name"])
 		return
 	selected_relic = -1 if selected_relic == index else index
+	selected_card = -1
 
 
 func _try_socket(cell: Vector2i, index: int) -> void:
@@ -861,6 +1221,8 @@ func _draw() -> void:
 		for p in [Vector2(-q, q * 0.5), Vector2(q, q * 0.6), Vector2(0, -q * 0.6)]:
 			draw_circle(c + p, q * 1.25, colors["rock_edge"])
 			draw_circle(c + p + Vector2(-1, -2), q * 1.05, colors["rock"])
+	for cell in traps:
+		_draw_trap(font, cell)
 	for cell in dunes:
 		var center := Grid.cell_to_world(cell)
 		draw_circle(center + Vector2(0, 6), Grid.CELL * 0.45, Color("c9a467"))
@@ -892,13 +1254,13 @@ func _draw() -> void:
 		var preview_range := 0.0
 		if towers.has(hover):
 			preview_range = 0.0 if towers[hover].is_line() else towers[hover].range_px()
-		elif selected != "":
-			preview_range = tower_range(selected, hover)
+		elif _selected_tower() != "":
+			preview_range = tower_range(_selected_tower(), hover)
 		if preview_range > 0.0:
 			draw_arc(Grid.cell_to_world(hover), preview_range, 0.0, TAU, 48, Color(0.25, 0.5, 0.82, 0.7), 2.0)
 
 	_draw_hud(font)
-	_draw_build_bar(font)
+	_draw_hand(font)
 	_draw_relic_bar(font)
 
 
@@ -956,50 +1318,6 @@ func _enemy_count_name(t: String, n: int) -> String:
 	return s
 
 
-## Barre du bas : les choix de construction, avec leur touche et leur prix.
-## On peut aussi cliquer dessus.
-func _draw_build_bar(font: Font) -> void:
-	for i in TowerTypes.ORDER.size() + 1:
-		var r := _build_bar_rect(i)
-		var id: String = "" if i == 0 else TowerTypes.ORDER[i - 1]
-		var label := "1 Mur"
-		var cost := wall_cost()
-		var color := Color("6b5a45")
-		if id != "":
-			var d := TowerTypes.get_type(id)
-			label = "%d %s" % [i + 1, d["name"]]
-			cost = tower_cost(id)
-			color = d["color"]
-		var active: bool = id == selected
-		draw_rect(r, Color(1, 1, 1, 0.15) if active else Color(1, 1, 1, 0.05))
-		if active:
-			draw_rect(r, Color("ffe066"), false, 2.0)
-		var text_color := Color.WHITE if gold >= cost else Color(1, 1, 1, 0.4)
-		if id == "":
-			# petit bloc de mur
-			var wr := Rect2(r.position + Vector2(5, 9), Vector2(26, 22))
-			draw_texture_rect_region(Art.WALL_TEXTURES.get(biome["id"], Art.WALL_TEXTURES["desert"]), Rect2(wr.position, Vector2(26, 16)), Rect2(0, 0, 52, 32))
-			draw_rect(Rect2(wr.position + Vector2(0, 16), Vector2(26, 6)), Art.WALL_PALETTES.get(biome["id"], Art.WALL_PALETTES["desert"])["front"])
-		else:
-			TowerArt.draw_icon(self, id, r.position + Vector2(18, 20), 34.0)
-			if gold < cost:
-				draw_rect(Rect2(r.position + Vector2(2, 2), Vector2(32, 36)), Color(0.1, 0.1, 0.1, 0.55))  # trop cher : grisé
-			draw_line(r.position + Vector2(6, 38), r.position + Vector2(30, 38), color, 2.0)
-		draw_string(font, r.position + Vector2(36, 18), label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 40, 14, text_color)
-		var price := "%d or" % cost
-		if id == "" and free_walls_left() > 0:
-			price = "gratuit (%d)" % free_walls_left()
-		if id == "" and Difficulty.active("carriere"):
-			price += "  ·  %d/%d" % [walls.size(), Difficulty.WALL_LIMIT]
-		draw_string(font, r.position + Vector2(36, 34), price, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, text_color)
-
-
-func _build_bar_rect(i: int) -> Rect2:
-	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL
-	var slot_w := Grid.SCREEN.x / 7.0
-	return Rect2(i * slot_w + 3, top + 4, slot_w - 6, 40)
-
-
 ## Barre des reliques, sous la barre de construction.
 func _draw_relic_bar(font: Font) -> void:
 	var top := Grid.OFFSET.y + Grid.ROWS * Grid.CELL + 48
@@ -1041,13 +1359,6 @@ func _relic_bar_slot(pos: Vector2) -> int:
 	return -1
 
 
-func _build_bar_slot(pos: Vector2) -> int:
-	for i in TowerTypes.ORDER.size() + 1:
-		if _build_bar_rect(i).has_point(pos):
-			return i
-	return -1
-
-
 # --- Fiches d'informations (au survol) ---------------------------------------
 
 func _draw_overlay() -> void:
@@ -1071,12 +1382,11 @@ func _draw_overlay() -> void:
 			_draw_panel(font, Vector2(12, 62), _wave_panel(index))
 		return
 
-	# Tour dans la barre de construction
-	var slot := _build_bar_slot(mouse)
-	if slot > 0:
-		var id: String = TowerTypes.ORDER[slot - 1]
-		var r := _build_bar_rect(slot)
-		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _tower_panel(id, null), true)
+	# Carte de la main (ou réserve de murs)
+	var slot := _hand_slot(mouse)
+	if slot >= 0:
+		var r := _hand_rect(slot)
+		_draw_panel(font, Vector2(r.position.x, r.position.y - 8), _pile_panel() if slot == 0 else _card_panel(slot - 1), true)
 		return
 
 	# Relique dans la barre
@@ -1092,6 +1402,12 @@ func _draw_overlay() -> void:
 		if is_instance_valid(e) and e.global_position.distance_to(mouse) <= e.data["radius"] + 4:
 			_draw_panel(font, mouse + Vector2(18, 18), _enemy_panel(e))
 			return
+	# Piège
+	if traps.has(cell):
+		var tr: Dictionary = traps[cell]
+		_draw_panel(font, mouse + Vector2(18, 18), [_line(Cards.get_card(tr["id"])["name"], 16, Color.WHITE),
+			_line(Cards.describe(tr["id"], tr["lvl"])), _line("Encore %d vague%s" % [tr["waves"], "s" if tr["waves"] > 1 else ""], 13, Color("ffe066"))])
+		return
 	# Tour posée
 	if Grid.in_bounds(cell) and towers.has(cell):
 		_draw_panel(font, mouse + Vector2(18, 18), _tower_panel(towers[cell].type_id, towers[cell]))
@@ -1173,7 +1489,6 @@ func _tower_panel(id: String, t: Tower) -> Array:
 		lines.append(_line("Revente (clic droit) : %d or" % (t.spent / 2), 13, Color(1, 1, 1, 0.6)))
 	else:
 		lines.append(_line("Reliques : %d (une seule légendaire)" % (2 if Run.has_joker("ecrin") else 1)))
-		lines.append(_line("Prix : %d or  ·  se pose sur un mur" % tower_cost(id), 13, Color("ffe066")))
 	return lines
 
 
@@ -1273,6 +1588,10 @@ func _enemy_panel(e: Enemy) -> Array:
 		lines.append(_line("Ralenti (%s s)" % _num(e.slow_time), 13, Color("7fd6e8")))
 	if e.is_poisoned():
 		lines.append(_line("Empoisonné (%s s)" % _num(e.poison_time), 13, Color("8fd14f")))
+	if card_fx["speed"] < 1.0:
+		lines.append(_line("Bandelettes : -%d %% de vitesse" % roundi((1.0 - card_fx["speed"]) * 100), 13, Cards.KINDS["curse"]["color"]))
+	if card_fx["vulnerable"] > 0.0:
+		lines.append(_line("Malédiction : +%d %% de dégâts subis" % roundi(card_fx["vulnerable"] * 100), 13, Cards.KINDS["curse"]["color"]))
 	return lines
 
 

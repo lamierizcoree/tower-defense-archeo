@@ -32,6 +32,7 @@ var acid := 0.0              # spécialisation Acide : dégâts subis en plus ta
 var regen := 0.0             # difficulté « Chair maudite » : part des PV regagnée par seconde
 var others: Array = []       # tous les ennemis du niveau (pour l'embaumeur)
 var towers: Dictionary = {}  # toutes les tours du niveau (pour le pilleur)
+var card_fx: Dictionary = {}  # malus des cartes jouées (vitesse, dégâts subis), partagé avec level.gd
 var phase := 1               # boss : 2 sous la moitié des PV
 var ability_timer := 1.0     # soin / sabotage
 var heal_flash := 0.0        # affichage du soin
@@ -118,7 +119,7 @@ func _process(delta: float) -> void:
 	_update_effects(delta)
 	if dead:
 		return
-	var current_speed := speed * slow_factor
+	var current_speed := speed * slow_factor * float(card_fx.get("speed", 1.0))
 	if ice.has(Grid.world_to_cell(position)) and not flies():
 		current_speed *= 2.0  # ça glisse !
 	var target := Grid.cell_to_world(next_cell)
@@ -202,6 +203,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 		amount *= 1.0 + acid
 	if alchemy and poison_time > 0.0 and slow_time > 0.0:
 		amount *= 1.0 + Jokers.ALCHIMISTES_DAMAGE
+	amount *= 1.0 + float(card_fx.get("vulnerable", 0.0))
 	if source != null and is_instance_valid(source):
 		source.dealt += minf(amount, maxf(hp, 0.0))
 		last_hit = source

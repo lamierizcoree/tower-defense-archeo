@@ -19,8 +19,9 @@ const MEUTE_PER_TOWER := 0.1     # Esprit de meute : +10 % de cadence par autre 
 const MEUTE_MAX := 0.5           # ... plafonné à +50 %
 const MAUDIT_GOLD := 2.0         # Trésor maudit : or gagné x2
 const MAUDIT_HP := 1.25          # ... mais ennemis +25 % de PV
-const ARCHITECTE_FREE_WALLS := 20  # Architecte fou : 20 murs gratuits par niveau...
-const ARCHITECTE_TOWER := 1.5    # ... mais tours +50 %
+const ARCHITECTE_WALLS := 10    # Architecte fou : 10 murs de plus au début de chaque niveau...
+const ARCHITECTE_TOWER := 1.5    # ... mais cartes de tour +50 %
+const BRIQUES_WALLS := 1         # Briques creuses : chaque carte de murs donne 1 mur de plus
 
 const DATA := {
 	# --- Communs ---
@@ -29,11 +30,11 @@ const DATA := {
 	"pillard": {"name": "Pillard", "rarity": "commun", "family": "marchands",
 		"desc": "Chaque ennemi qui s'échappe vous rapporte 6 or."},
 	"briques": {"name": "Briques creuses", "rarity": "commun", "family": "batisseurs",
-		"desc": "Les murs ne coûtent plus que 1 or."},
+		"desc": "Chaque carte de murs donne 1 mur de plus."},
 	"prime": {"name": "Prime de chasse", "rarity": "commun", "family": "marchands",
 		"desc": "+2 or pour chaque ennemi tué."},
 	"fondations": {"name": "Fondations", "rarity": "commun", "family": "batisseurs",
-		"desc": "Les tours coûtent 25 % moins cher."},
+		"desc": "Les cartes de tour coûtent 25 % moins cher."},
 	"rempart": {"name": "Rempart", "rarity": "commun", "family": "strateges",
 		"desc": "+2 vies au début de chaque niveau."},
 	# --- Non communs ---
@@ -66,7 +67,7 @@ const DATA := {
 	"maudit": {"name": "Trésor maudit", "rarity": "legendaire", "family": "marchands",
 		"desc": "Tout l'or gagné pendant les vagues est doublé, mais les ennemis ont 25 % de PV en plus."},
 	"architecte": {"name": "Architecte fou", "rarity": "legendaire", "family": "batisseurs",
-		"desc": "Les 20 premiers murs de chaque niveau sont gratuits, mais les tours coûtent 50 % plus cher."},
+		"desc": "10 murs de plus au début de chaque niveau, mais les cartes de tour coûtent 50 % plus cher."},
 }
 
 ## --- Synergies -------------------------------------------------------------

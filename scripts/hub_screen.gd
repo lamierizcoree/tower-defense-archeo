@@ -4,8 +4,9 @@ extends Node2D
 
 const BTN_PLAY := Rect2(330, 330, 300, 50)
 const BTN_ABANDON := Rect2(330, 390, 300, 34)
-const BTN_CODEX := Rect2(330, 450, 300, 44)
-const BTN_UPGRADES := Rect2(330, 504, 300, 44)
+const BTN_CODEX := Rect2(330, 434, 300, 40)
+const BTN_DECK := Rect2(330, 480, 300, 40)
+const BTN_UPGRADES := Rect2(330, 526, 300, 40)
 const BTN_RESET := Rect2(790, 690, 160, 32)
 const BTN_DIFF_DOWN := Rect2(330, 580, 44, 40)
 const BTN_DIFF_UP := Rect2(586, 580, 44, 40)
@@ -31,6 +32,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif BTN_CODEX.has_point(p):
 		Run.codex_return = "res://scenes/hub.tscn"
 		get_tree().change_scene_to_file("res://scenes/codex.tscn")
+	elif BTN_DECK.has_point(p):
+		get_tree().change_scene_to_file("res://scenes/deck.tscn")
 	elif BTN_UPGRADES.has_point(p):
 		get_tree().change_scene_to_file("res://scenes/upgrades.tscn")
 	elif BTN_DIFF_DOWN.has_point(p) and _can_choose_difficulty():
@@ -81,6 +84,7 @@ func _draw() -> void:
 	if Run.started:
 		UI.button(self, BTN_ABANDON, "Abandonner et repartir de zéro", BTN_ABANDON.has_point(mouse), true, 13)
 	UI.button(self, BTN_CODEX, "Carnet des reliques et pouvoirs", BTN_CODEX.has_point(mouse))
+	UI.button(self, BTN_DECK, "Deck de cartes" + ("  (en cours d'expédition)" if Run.started else ""), BTN_DECK.has_point(mouse), true, 16)
 	var free := Profile.points_available() - Profile.points_used()
 	UI.button(self, BTN_UPGRADES, "Améliorations" + (" (%d à répartir)" % free if free > 0 else ""), BTN_UPGRADES.has_point(mouse))
 	_draw_difficulty(font, mouse)

@@ -17,6 +17,7 @@ var bosses := {}              # identifiant du boss -> nombre de victoires
 var alloc := {}               # catégorie d'amélioration -> points
 var difficulty_unlocked := 0  # plus haut niveau de difficulté débloqué (voir data/difficulty.gd)
 var difficulty := 0           # niveau choisi pour la prochaine expédition
+var deck := {}                # deck construit au camp : identifiant de carte -> exemplaires (voir data/cards.gd)
 
 
 func _ready() -> void:
@@ -42,6 +43,11 @@ func load_profile() -> void:
 	bosses = data.get("bosses", {})
 	difficulty_unlocked = clampi(int(data.get("difficulty_unlocked", 0)), 0, Difficulty.MAX)
 	difficulty = clampi(int(data.get("difficulty", 0)), 0, difficulty_unlocked)
+	deck = {}
+	var saved_deck: Dictionary = data.get("deck", {})
+	for k in saved_deck:
+		if Cards.DATA.has(k):
+			deck[k] = int(saved_deck[k])
 	alloc = {}
 	var saved_alloc: Dictionary = data.get("alloc", {})
 	for k in saved_alloc:
@@ -57,6 +63,7 @@ func save_profile() -> void:
 		"rank": rank, "total_score": total_score, "best_score": best_score,
 		"runs": runs, "victories": victories, "bosses": bosses, "alloc": alloc,
 		"difficulty_unlocked": difficulty_unlocked, "difficulty": difficulty,
+		"deck": deck,
 	}, "  "))
 
 
@@ -71,6 +78,7 @@ func reset() -> void:
 	alloc = {}
 	difficulty_unlocked = 0
 	difficulty = 0
+	deck = {}
 	save_profile()
 
 
@@ -93,6 +101,28 @@ func level_cleared(boss_id := "") -> Array[String]:
 		if need > before and need <= rank:
 			unlocked.append(id)
 	return unlocked
+
+
+func is_card_unlocked(id: String) -> bool:
+	return Cards.is_unlocked(id, rank)
+
+
+## Deck utilisé pour la prochaine expédition : celui construit au camp s'il est valable,
+## sinon le deck de départ.
+func deck_counts() -> Dictionary:
+	if not deck.is_empty() and Cards.deck_problem(deck) == "":
+		var ok := true
+		for id in deck:
+			if deck[id] > 0 and not is_card_unlocked(id):
+				ok = false
+		if ok:
+			return deck.duplicate()
+	return Cards.DEFAULT_DECK.duplicate()
+
+
+func set_deck(counts: Dictionary) -> void:
+	deck = counts.duplicate()
+	save_profile()
 
 
 ## La prochaine relique à débloquer : [rang nécessaire, identifiant], ou [] si tout est débloqué.

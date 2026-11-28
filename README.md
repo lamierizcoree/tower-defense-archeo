@@ -13,18 +13,19 @@ Prototype du tower defense roguelite en labyrinthe. Une expédition traverse 2 b
 
 | Touche | Action |
 |---|---|
-| Clic gauche | Poser un mur, ou la tour choisie sur un mur |
-| Clic droit | Retirer une tour (moitié du prix rendue), sinon un mur (remboursé) |
-| 1 | Construire des murs |
-| 2 à 7 | Choisir une tour |
+| Clic gauche | Poser un mur, ou jouer la carte choisie (tour sur un mur, piège sur une case libre) |
+| Clic droit | Retirer une tour (moitié du prix rendue), sinon un mur (il revient dans la réserve) ; annule la carte choisie |
+| 1 | Mode Mur (poser les murs de la réserve) |
+| 2 à 9, 0 | Choisir ou jouer une carte de la main |
 | Espace | Lancer la vague suivante |
 | F | Vitesse x2 |
 | E | Tourner une tour qui porte la Lance du Pharaon (souris sur la tour) |
 
-Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur la barre du bas pour choisir quoi construire.
+Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur les cartes de la barre du bas.
 
 Pour voir les détails, passe la souris :
-- sur une tour (posée ou dans la barre du bas) : dégâts, tirs par seconde, portée, effet spécial, prix ;
+- sur une tour posée ou une carte de la main : dégâts, tirs par seconde, portée, effet spécial, prix ;
+- sur la réserve de murs (en bas à gauche) : murs restants, pioche, défausse, effets en cours ;
 - sur la ligne « Prochaine vague » (ⓘ) : nombre d'ennemis de chaque type, points de vie, vitesse, vies perdues s'ils s'échappent et capacités spéciales ;
 - sur un ennemi : ses points de vie restants et ses effets en cours.
 
@@ -32,6 +33,7 @@ Pour voir les détails, passe la souris :
 
 Le jeu démarre au camp de base :
 - **Nouvelle expédition** (ou **Continuer** si une expédition est en cours).
+- **Deck de cartes** : on choisit les 20 cartes de son deck (voir plus bas).
 - **Carnet des reliques et pouvoirs** : la liste de toutes les reliques et de tous les jokers. Les reliques pas encore débloquées sont masquées, avec le rang qui les débloque. Le carnet s'ouvre aussi depuis la carte (bouton en haut à droite).
 - **Améliorations** : on répartit ses points d'amélioration.
 
@@ -85,7 +87,7 @@ Chaque niveau ajoute **une nouvelle règle**, qui s'ajoute à celles des niveaux
 |---|---|---|
 | 1 | Élites errants | 1 ennemi sur 10 est un élite (cercle doré) : PV x2,5, coûte 1 vie de plus, rapporte double or et triple score |
 | 2 | Vents contraires | Ennemis +10 % de vitesse |
-| 3 | Fouilles coûteuses | Les murs coûtent 3 or au lieu de 2 |
+| 3 | Fouilles coûteuses | Les cartes de murs coûtent 2 or de plus |
 | 4 | Rivalité des ateliers | À partir de 3 tours identiques, ces tours tirent 20 % moins vite |
 | 5 | Bourse maigre | 25 % d'or en moins au début de chaque niveau |
 | 6 | Carrière épuisée | 20 murs au maximum par niveau |
@@ -106,11 +108,12 @@ Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
    - $ marchand : 3 reliques, 2 jokers et une trousse de soins (+3 vies), payés en trésor.
    - ▲ feu de camp : au choix, se reposer (+6 vies), fouiller les environs (+25 trésor) ou se défaire d'un joker.
    - ☠ boss : 5 vagues, le boss arrive à la dernière.
-2. **Le niveau** : on repart d'une grille vide avec de l'or neuf. Les vies, elles, se gardent d'un niveau à l'autre.
+2. **Le niveau** : on repart d'une grille vide avec de l'or neuf, 5 murs et une nouvelle main de cartes (voir « Le deck de cartes »). Les vies, elles, se gardent d'un niveau à l'autre.
 3. **La récompense** : 1 carte parmi 3 (joker ou relique), ou passer pour gagner 3 vies. On garde 5 jokers et 8 reliques au maximum : au-delà, il faut en abandonner un.
-4. **Le bilan** : à la fin de chaque niveau réussi, un bilan montre les ennemis vaincus, les fuites, l'or gagné, le trésor gardé, le score, et les dégâts de chaque tour (la meilleure est marquée d'une étoile). Espace ou clic pour continuer.
-5. **Le trésor** : à la fin de chaque niveau, la moitié de l'or restant devient du trésor, qui se garde pour toute l'expédition. On le dépense chez le marchand et dans certains événements. Une relique ou un joker gagné sans place libre est revendu automatiquement en trésor.
-6. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
+4. **L'atelier de cartes** : après chaque victoire, on améliore une carte du deck. On peut aussi graver une relique (elle est détruite) pour une amélioration de plus, et acheter une relique ou un joker à l'étal avec le trésor.
+5. **Le bilan** : à la fin de chaque niveau réussi, un bilan montre les ennemis vaincus, les fuites, l'or gagné, le trésor gardé, le score, et les dégâts de chaque tour (la meilleure est marquée d'une étoile). Espace ou clic pour continuer.
+6. **Le trésor** : à la fin de chaque niveau, la moitié de l'or restant devient du trésor, qui se garde pour toute l'expédition. On le dépense chez le marchand et dans certains événements. Une relique ou un joker gagné sans place libre est revendu automatiquement en trésor.
+7. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
 
 ### Les biomes
 
@@ -170,9 +173,9 @@ Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chance
 |---|---|---|
 | Commun | Maçon | Chaque mur ou rocher collé à une tour lui donne +12 de portée |
 | Commun | Pillard | Chaque ennemi qui s'échappe rapporte 6 or |
-| Commun | Briques creuses | Les murs coûtent 1 or |
+| Commun | Briques creuses | Chaque carte de murs donne 1 mur de plus |
 | Commun | Prime de chasse | +2 or par ennemi tué |
-| Commun | Fondations | Tours 25 % moins chères |
+| Commun | Fondations | Cartes de tour 25 % moins chères |
 | Commun | Rempart | +2 vies au début de chaque niveau |
 | Non commun | Butin de fouille | +30 % d'or gagné pendant les vagues |
 | Non commun | Cul-de-sac | Une tour bloquée sur 3 côtés ou plus inflige double dégâts |
@@ -187,7 +190,7 @@ Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chance
 | Rare | Écrin double | Chaque tour peut porter 2 reliques (toujours une seule légendaire) |
 | Légendaire | Esprit de meute | +10 % de cadence par autre tour du même type posée (+50 % au maximum) |
 | Légendaire | Trésor maudit | Or gagné pendant les vagues x2, mais ennemis +25 % de PV |
-| Légendaire | Architecte fou | Les 20 premiers murs de chaque niveau sont gratuits, mais tours +50 % plus chères |
+| Légendaire | Architecte fou | 10 murs de plus au début de chaque niveau, mais cartes de tour 50 % plus chères |
 
 ### Les synergies de jokers
 
@@ -209,16 +212,45 @@ Chaque joker appartient à un **clan**. Avoir 2 puis 3 jokers d'un même clan do
 | Cartographe | Long détour + Sablier ancien | Long détour : +1 or toutes les 2 cases au lieu de 3 |
 | Arsenal | Écho + Esprit de meute | Les rebonds d'Écho font 100 % des dégâts |
 
+## Le deck de cartes
+
+On ne pose plus les tours avec un budget libre : on joue des **cartes**, piochées dans un deck de 20 cartes, et chaque carte coûte de l'or selon sa puissance.
+
+- **Au début de chaque niveau** : tout le deck est mélangé, on pioche **5 cartes** (toujours au moins une carte de tour et une carte de murs) et on a **5 murs** à poser.
+- **Après chaque vague** : on pioche **3 cartes** de plus. La main contient 9 cartes au maximum (une carte piochée en trop part dans la défausse).
+- **Pioche vide** : la défausse est remélangée et forme une nouvelle pioche.
+- **Jouer une carte** : les cartes de murs, de malus et de bonus se jouent d'un clic. Les cartes de tour et de piège se choisissent, puis on clique sur un mur (tour) ou sur une case libre (piège). La carte jouée part dans la défausse.
+- Les murs ne coûtent plus d'or : on pose ceux de la réserve. Un mur retiré revient dans la réserve.
+
+| Carte | Type | Prix | Effet | Amélioration 1 | Amélioration 2 | Rang |
+|---|---|---|---|---|---|---|
+| Pierres taillées | Construction | 3 | +3 murs | +4 murs | +5 murs | 0 |
+| Arbalète, Baliste, Mortier, Givre, Alambic, Totem | Tour | prix de la tour | Pose la tour sur un mur | 30 % moins chère | Arrive au niveau 2 | 0 |
+| Fosse à pieux | Piège | 8 | 30 dégâts à chaque ennemi qui passe, 1 vague | 40 dégâts, 2 vagues | 50 dégâts, 3 vagues | 0 |
+| Huile de lampe | Bonus tours | 10 | Tours +25 % de cadence, 1 vague | 2 vagues | 3 vagues | 0 |
+| Résine collante | Piège | 6 | Ralentit de 50 % pendant 2 s, 1 vague | 2,5 s, 2 vagues | 3 s, 3 vagues | 2 |
+| Pierre à aiguiser | Bonus tours | 10 | Tours +25 % de dégâts, 1 vague | 2 vagues | 3 vagues | 3 |
+| Bandelettes lourdes | Malus ennemis | 10 | Ennemis 20 % plus lents, 1 vague | 2 vagues | 3 vagues | 5 |
+| Malédiction des os | Malus ennemis | 12 | Ennemis +20 % de dégâts subis, 1 vague | 2 vagues | 3 vagues | 7 |
+
+Un effet joué entre deux vagues compte à partir de la vague suivante ; joué pendant une vague, cette vague compte. Les ibis volent au-dessus des pièges. Chaque ennemi déclenche un piège une fois par vague.
+
+**Construire son deck** (camp de base, bouton « Deck de cartes ») : 20 cartes exactement, 6 exemplaires au plus par carte, au moins une carte de tour et une carte de murs. Les cartes se débloquent avec le rang d'archéologue (colonne « Rang »). Deck de départ : 6 Pierres taillées, 4 Arbalètes, 2 Givres, 2 Balistes, 1 Mortier, 1 Alambic, 1 Totem, 2 Fosses à pieux, 1 Huile de lampe.
+
+**Améliorer ses cartes** : après chaque victoire, l'atelier de cartes permet d'améliorer une carte du deck. Chaque carte s'améliore 2 fois au plus, et l'amélioration dure toute l'expédition. Graver une relique (la détruire) donne une amélioration de plus.
+
+Tous les réglages (taille du deck, main de départ, cartes par vague, murs de base, prix et effets) sont en haut de `scripts/data/cards.gd`.
+
 ## Les tours
 
-| Touche | Tour | Prix | Rôle |
-|---|---|---|---|
-| 2 | Arbalète | 15 | Tir rapide sur un ennemi |
-| 3 | Baliste | 30 | Gros dégâts, grande portée, lente |
-| 4 | Mortier | 35 | Dégâts de zone, ne tire pas de près |
-| 5 | Givre | 20 | Ralentit tous les ennemis à portée |
-| 6 | Alambic | 25 | Empoisonne, vise d'abord les ennemis sains |
-| 7 | Totem | 30 | N'attaque pas : les tours voisines tirent 30 % plus vite |
+| Tour | Prix | Rôle |
+|---|---|---|
+| Arbalète | 15 | Tir rapide sur un ennemi |
+| Baliste | 30 | Gros dégâts, grande portée, lente |
+| Mortier | 35 | Dégâts de zone, ne tire pas de près |
+| Givre | 20 | Ralentit tous les ennemis à portée |
+| Alambic | 25 | Empoisonne, vise d'abord les ennemis sains |
+| Totem | 30 | N'attaque pas : les tours voisines tirent 30 % plus vite |
 
 ### Améliorer les tours
 
@@ -252,7 +284,8 @@ Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur v
 - `scripts/map_gen.gd` : création de la carte à embranchements.
 - `scripts/level.gd` : un niveau (murs, pathfinding `AStarGrid2D`, vagues, dunes, tempête, affichage).
 - `scripts/map_screen.gd`, `scripts/reward_screen.gd`, `scripts/end_screen.gd` : les autres écrans.
-- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques, améliorations).
+- `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques, améliorations, cartes).
+- `scripts/cards_screen.gd` : l'atelier de cartes après chaque victoire ; `scripts/deck_screen.gd` : la construction du deck au camp de base.
 - `scripts/grid.gd` : taille de la grille, conversions case ↔ pixels.
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
 - `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).
