@@ -17,7 +17,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("1d1a22"))
+	draw_rect(Screen.visible_rect(), Color("1d1a22"))
 	var title := "Expédition réussie !" if Run.victory else "L'expédition est perdue"
 	var sub := "Les deux sites de fouilles sont pacifiés." if Run.victory else "Ce qui dormait dans le %s a eu raison de vous." % Run.biome()["name"].to_lower()
 	draw_string(font, Vector2(0, 160), title, HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 40, Color("ffe066") if Run.victory else Color("ff8a7a"))

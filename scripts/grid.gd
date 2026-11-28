@@ -6,7 +6,9 @@ const COLS := 20          # nombre de colonnes
 const ROWS := 12          # nombre de lignes
 const CELL := 48          # taille d'une case en pixels
 const OFFSET := Vector2(0, 64)  # la grille commence sous la barre d'infos
-const SCREEN := Vector2(960, 736)
+## Taille de la zone de jeu de l'écran en cours (960x736, ou plus large pour un niveau sur
+## écran large) : mise à jour par Screen (screen.gd) selon la taille de la fenêtre.
+static var SCREEN := Vector2(960, 736)
 
 const DIRS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 

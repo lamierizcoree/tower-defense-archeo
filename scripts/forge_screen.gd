@@ -102,7 +102,7 @@ func _fuse() -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("221a17"))
+	draw_rect(Screen.visible_rect(), Color("221a17"))
 	# braises
 	var glow := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 200.0)
 	draw_circle(Vector2(480, 700), 160, Color(1.0, 0.4, 0.1, 0.03 + 0.02 * glow))

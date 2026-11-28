@@ -20,8 +20,9 @@ Prototype du tower defense roguelite en labyrinthe. Une expédition traverse 2 b
 | Espace | Lancer la vague suivante |
 | F | Vitesse x2 |
 | E | Tourner une tour qui porte la Lance du Pharaon (souris sur la tour) |
+| F11 ou Alt+Entrée | Plein écran (PC) |
 
-Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur les cartes de la barre du bas.
+Les ennemis partent des cases vertes et vont vers la case violette. Les petits points montrent leur chemin actuel. Un mur qui fermerait complètement le passage est refusé. On peut aussi cliquer sur les cartes de la main (sous la grille, ou dans la colonne de droite sur écran large).
 
 Pour voir les détails, passe la souris :
 - sur une tour posée ou une carte de la main : dégâts, tirs par seconde, portée, effet spécial, prix ;
@@ -290,11 +291,20 @@ Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur v
 - `scripts/data/` : les données à modifier pour équilibrer (biomes, plans des niveaux, ennemis, jokers, reliques, améliorations, cartes).
 - `scripts/cards_screen.gd` : l'atelier de cartes après chaque victoire ; `scripts/deck_screen.gd` : la construction du deck au camp de base.
 - `scripts/grid.gd` : taille de la grille, conversions case ↔ pixels.
+- `scripts/screen.gd` : adaptation à la taille de l'écran, accessible partout sous le nom `Screen` (voir « Affichage »).
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
 - `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).
 - `scripts/tower_types.gd` : les chiffres des 7 tours (prix, portée, dégâts, cadence).
 
 Les valeurs à modifier pour tester l'équilibrage (coûts, portée, dégâts, vitesse) sont des constantes en haut de chaque script.
+
+## Affichage (toutes résolutions)
+
+Le jeu s'adapte à la fenêtre et à l'écran : PC 16:9, 16:10 (Steam Deck), ultra-large, 4K, et téléphone.
+- Chaque écran est dessiné dans une zone de taille fixe (960x736), agrandie au maximum sans déformation et centrée ; le fond remplit les bords. Le rendu se fait à la résolution réelle (mode `canvas_items`, aspect `expand`), donc textes et sprites restent nets.
+- Le niveau a deux dispositions, et prend celle qui affiche la grille le plus grand : **haute** (main et reliques sous la grille, écrans 4:3 ou portrait) et **large** (main et reliques dans une colonne à droite, 1160x656 : 16:9, 16:10, ultra-large, téléphone en paysage). En 16:9 la grille est environ 12 % plus grande qu'avant et il n'y a plus de bandes noires.
+- Téléphone tenu en hauteur : le jeu reste jouable et un message propose de le tourner.
+- Pour ajouter une disposition à un autre écran : lui donner une méthode `pick_layout(visible: Vector2) -> Vector2` qui renvoie la taille de sa zone (voir `level.gd`).
 
 ## Version web (téléphone, tablette, navigateur)
 

@@ -67,7 +67,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var biome := Run.biome()
 	var colors: Dictionary = biome["colors"]
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), colors["background"])
+	draw_rect(Screen.visible_rect(), colors["background"])
 	UI.button(self, CODEX_BUTTON, "Carnet", CODEX_BUTTON.has_point(get_global_mouse_position()))
 	UI.button(self, FORGE_BUTTON, "Forge", FORGE_BUTTON.has_point(get_global_mouse_position()))
 

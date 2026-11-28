@@ -119,7 +119,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
 	var tip := ""  # joker survolé : son infobulle est dessinée à la fin
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Run.biome()["colors"]["background"])
+	draw_rect(Screen.visible_rect(), Run.biome()["colors"]["background"])
 
 	var title := "Niveau réussi ! Choisis une récompense"
 	if node_type == "fouille":

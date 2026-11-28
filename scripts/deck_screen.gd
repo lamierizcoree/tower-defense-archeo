@@ -68,7 +68,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var mouse := get_global_mouse_position()
-	draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color("231d19"))
+	draw_rect(Screen.visible_rect(), Color("231d19"))
 	draw_string(font, Vector2(0, 52), "Ton deck de cartes", HORIZONTAL_ALIGNMENT_CENTER, Grid.SCREEN.x, 32, Color("ffe066"))
 	var towers := 0
 	var walls := 0
