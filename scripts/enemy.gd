@@ -26,6 +26,7 @@ var poison_time := 0.0
 var venin := false           # joker « Venin glacé »
 var hp_mult := 1.0           # multiplicateur de PV de la vague (sans le bonus d'élite)
 var elite := false           # difficulté « Élites errants » : plus de PV, coûte 1 vie de plus
+var acid := 0.0              # spécialisation Acide : dégâts subis en plus tant qu'il est empoisonné
 var regen := 0.0             # difficulté « Chair maudite » : part des PV regagnée par seconde
 
 
@@ -113,6 +114,8 @@ func _update_effects(delta: float) -> void:
 func take_damage(amount: float) -> void:
 	if dead:
 		return
+	if acid > 0.0 and poison_time > 0.0:
+		amount *= 1.0 + acid
 	hp -= amount
 	if hp <= 0.0:
 		dead = true

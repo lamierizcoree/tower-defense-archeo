@@ -170,6 +170,24 @@ Comme les reliques, les jokers ont 4 raretés. À chaque carte joker, les chance
 | 6 | Alambic | 25 | Empoisonne, vise d'abord les ennemis sains |
 | 7 | Totem | 30 | N'attaque pas : les tours voisines tirent 30 % plus vite |
 
+### Améliorer les tours
+
+Clique sur une tour posée (ou survole-la et appuie sur **U**) pour ouvrir son menu d'amélioration.
+
+- **Niveau 2** (60 % du prix de la tour) : dégâts et effets +30 %, portée +10 %.
+- **Niveau 3** (100 % du prix) : on choisit une **spécialisation** parmi deux voies.
+
+| Tour | Voie A | Voie B |
+|---|---|---|
+| Arbalète | Rafale : cadence x2 | Tireur d'élite : dégâts x1,6, portée +40 %, vise le plus résistant |
+| Baliste | Harpon : dégâts x1,3, ralentit la cible de 50 % pendant 1,5 s | Perce-rangs : le carreau traverse tous les ennemis sur sa trajectoire |
+| Mortier | Obus incendiaires : l'explosion brûle (6 dégâts/s pendant 3 s) | Grand calibre : dégâts x1,5, explosion 50 % plus large, cadence x0,8 |
+| Givre | Blizzard : portée x1,4 | Gel profond : ralentit de 70 %, dégâts x3 |
+| Alambic | Nuage toxique : empoisonne aussi autour de la cible | Acide : poison x1,5, les empoisonnés subissent +20 % de dégâts |
+| Totem | Tambours de guerre : bonus de cadence x1,7 | Totem de rage : tours à portée +25 % de dégâts |
+
+Revendre une tour rend la moitié de tout ce qu'elle a coûté (pose et améliorations). Les chiffres sont dans `scripts/tower_types.gd`.
+
 ## Organisation du code
 
 - `scenes/` : les écrans (camp de base, carnet, améliorations, carte, niveau, récompense, fin). Le camp de base est lancé au démarrage.
