@@ -4,5 +4,6 @@
 set -e
 GODOT="${GODOT:-godot}"
 mkdir -p build/web
+touch build/.gdignore   # Godot ne doit pas importer le build lui-même
 "$GODOT" --headless --export-release "Web" build/web/index.html
 echo "Export terminé : build/web (à publier sur la branche gh-pages)"
