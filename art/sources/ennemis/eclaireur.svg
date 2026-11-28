@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Éclaireur : momie de garde, écharpe rouge, yeux qui luisent. Vue de trois quarts, ne pivote pas. -->
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f1e6c8"/><stop offset="1" stop-color="#b9a77f"/></linearGradient>
+    <radialGradient id="o" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffe9a0"/><stop offset="1" stop-color="#ff5a2a"/></radialGradient>
+  </defs>
+  <g stroke="#3b2c1a" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="22" y="44" width="7" height="12" rx="3" fill="url(#b)"/><rect x="35" y="44" width="7" height="12" rx="3" fill="url(#b)"/>
+    <rect x="18" y="22" width="28" height="26" rx="11" fill="url(#b)"/>
+    <path d="M18 30 Q32 34 46 28 M18 37 Q32 41 46 35 M19 44 Q32 47 45 42" fill="none" stroke="#9c8a63" stroke-width="1"/>
+    <path d="M17 26 L47 34 L46 39 L18 31 Z" fill="#c94a3d"/>
+    <path d="M44 36 l6 10 l-5 1 Z" fill="#a83528"/>
+    <circle cx="32" cy="16" r="11" fill="url(#b)"/>
+    <path d="M22 12 Q32 9 42 13 M21 19 Q32 22 43 18" fill="none" stroke="#9c8a63" stroke-width="1"/>
+    <rect x="23" y="13.5" width="18" height="5" rx="2.5" fill="#2a1d12"/>
+    <circle cx="28" cy="16" r="2" fill="url(#o)" stroke="none"/><circle cx="36" cy="16" r="2" fill="url(#o)" stroke="none"/>
+    <path d="M46 30 Q52 34 50 42" fill="none" stroke="#b9a77f" stroke-width="5"/>
+    <path d="M18 30 Q12 34 14 42" fill="none" stroke="#b9a77f" stroke-width="5"/>
+  </g>
+</svg>
