@@ -37,6 +37,8 @@ var ability_timer := 1.0     # soin / sabotage
 var heal_flash := 0.0        # affichage du soin
 var sabotage_line := Vector2.ZERO
 var sabotage_flash := 0.0
+var last_hit: Node = null    # dernière tour qui l'a touché (bilan de fin de niveau)
+var poison_source: Node = null
 
 
 func setup(id: String, grid_astar: AStarGrid2D, start: Vector2i, goal_cell: Vector2i, hp_mult: float, speed_mult: float) -> void:
@@ -123,7 +125,7 @@ func _update_effects(delta: float) -> void:
 	if poison_time > 0.0:
 		poison_time -= delta
 		var dps := poison_dps * (2.0 if venin and slow_time > 0.0 else 1.0)
-		take_damage(dps * delta)
+		take_damage(dps * delta, poison_source)
 		if poison_time <= 0.0:
 			poison_dps = 0.0
 	elif regen > 0.0 and hp < max_hp:
@@ -174,13 +176,17 @@ func _sabotage() -> void:
 	sabotage_flash = 0.35
 
 
-func take_damage(amount: float) -> void:
+## source = la tour qui inflige les dégâts (pour le bilan), ou null.
+func take_damage(amount: float, source: Node = null) -> void:
 	if dead:
 		return
 	if acid > 0.0 and poison_time > 0.0:
 		amount *= 1.0 + acid
 	if alchemy and poison_time > 0.0 and slow_time > 0.0:
 		amount *= 1.0 + Jokers.ALCHIMISTES_DAMAGE
+	if source != null and is_instance_valid(source):
+		source.dealt += minf(amount, maxf(hp, 0.0))
+		last_hit = source
 	hp -= amount
 	if hp <= 0.0:
 		dead = true
@@ -200,7 +206,9 @@ func apply_slow(factor: float, duration: float) -> void:
 
 
 ## Empoisonne l'ennemi. Un nouveau poison remplace l'ancien s'il est plus fort.
-func apply_poison(dps: float, duration: float) -> void:
+func apply_poison(dps: float, duration: float, source: Node = null) -> void:
+	if dps >= poison_dps:
+		poison_source = source
 	poison_dps = maxf(poison_dps, dps)
 	poison_time = maxf(poison_time, duration)
 

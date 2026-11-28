@@ -59,10 +59,21 @@ var message := ""
 var message_time := 0.0
 var overlay: Node2D   # calque dessiné par-dessus les tours et les ennemis (fiches d'infos)
 
+# Bilan de fin de niveau
+const SUMMARY_PANEL := Rect2(150, 60, 660, 600)
+const SUMMARY_CONTINUE := Rect2(380, 596, 200, 44)
+var summary: Dictionary = {}     # rempli à la fin du niveau ; vide pendant le jeu
+var level_kills := 0
+var gold_earned := 0             # or gagné pendant le niveau (ennemis, vagues, jokers)
+var lives_lost := 0
+var score_start := 0
+var sold_towers: Array = []      # tours revendues : [nom, dégâts, éliminations]
+
 
 func _ready() -> void:
 	node = Run.current_node()
 	biome = Run.biome()
+	score_start = Run.score
 	layout = Levels.get_layout(node["layout"])
 	_load_layout()
 	waves = Levels.make_waves(Run.rng, Run.biome_index, Run.current.x, node["type"])
@@ -165,7 +176,7 @@ func _end_wave() -> void:
 		if Run.mission != "":
 			msg += "  ·  mission " + ("réussie !" if Run.mission_ok else "ratée")
 		_say(msg, 99.0)
-		get_tree().create_timer(1.5).timeout.connect(Run.level_won)
+		_make_summary(kept)
 		return
 	earn(WAVE_BONUS)
 	_shift_dunes()
@@ -242,6 +253,9 @@ func _on_enemy_died(e: Enemy) -> void:
 	earn(reward + (2 if Run.has_joker("prime") else 0))
 	Run.score += e.data["score"] * (3 if e.elite else 1)
 	Run.kills += 1
+	level_kills += 1
+	if e.last_hit != null and is_instance_valid(e.last_hit):
+		e.last_hit.kills += 1
 	if e.is_boss():
 		Run.boss_killed = true
 	var was_poisoned := e.is_poisoned()
@@ -260,6 +274,7 @@ func _on_enemy_reached_goal(e: Enemy) -> void:
 	if ended:
 		return
 	Run.lives -= e.lives_cost()
+	lives_lost += e.lives_cost()
 	leaks += 1
 	if Run.has_joker("pillard"):
 		earn(6)
@@ -338,6 +353,14 @@ func _is_free(cell: Vector2i) -> bool:
 # --- Construction ------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not summary.is_empty():
+		var go: bool = event is InputEventKey and event.pressed and event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]
+		go = go or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+			and SUMMARY_CONTINUE.has_point(get_global_mouse_position()))
+		if go:
+			summary = {}
+			Run.level_won()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_1:
@@ -441,6 +464,7 @@ func earn(amount: int) -> void:
 	var whole := int(gold_rest)
 	gold += whole
 	gold_rest -= whole
+	gold_earned += whole
 
 
 ## Multiplicateur de PV des ennemis d'une vague (Trésor maudit compris).
@@ -617,6 +641,8 @@ func _draw_upgrade_menu(font: Font, t: Tower, mouse: Vector2) -> void:
 func _remove_at(cell: Vector2i) -> void:
 	if towers.has(cell):
 		var t: Tower = towers[cell]
+		if t.dealt > 0.0 or t.kills > 0:
+			sold_towers.append([t.display_name() + " (revendue)", t.dealt, t.kills, t.data["color"]])
 		gold += t.spent / 2  # on récupère la moitié de ce qu'elle a coûté ; les reliques reviennent dans l'inventaire
 		if upgrade_cell == cell:
 			upgrade_cell = Vector2i(-1, -1)
@@ -1003,6 +1029,9 @@ func _build_bar_slot(pos: Vector2) -> int:
 # --- Fiches d'informations (au survol) ---------------------------------------
 
 func _draw_overlay() -> void:
+	if not summary.is_empty():
+		_draw_summary()
+		return
 	if ended:
 		return
 	var mouse := get_global_mouse_position()
@@ -1252,3 +1281,101 @@ func _num(x: float) -> String:
 	if absf(x - roundf(x)) < 0.05:
 		return str(roundi(x))
 	return "%.1f" % x
+
+
+# --- Bilan de fin de niveau --------------------------------------------------
+
+## Rassemble les chiffres du niveau. Le bilan reste affiché jusqu'à ce que le joueur continue.
+func _make_summary(treasure_kept: int) -> void:
+	var rows := []
+	for t in towers.values():
+		if is_instance_valid(t):
+			rows.append([t.display_name(), t.dealt, t.kills, t.data["color"]])
+	rows.append_array(sold_towers)
+	rows.sort_custom(func(a, b): return a[1] > b[1])
+	var total := 0.0
+	for r in rows:
+		total += r[1]
+	summary = {
+		"rows": rows,
+		"total": total,
+		"kills": level_kills,
+		"leaks": leaks,
+		"lives_lost": lives_lost,
+		"gold_earned": gold_earned,
+		"gold_left": gold,
+		"treasure": treasure_kept,
+		"score": Run.score - score_start + 100 * (Run.biome_index + 1),  # bonus de niveau ajouté par Run.level_won
+		"mission": Run.mission,
+		"mission_ok": Run.mission_ok,
+		"synergies": Jokers.active_synergies(Run.jokers),
+	}
+
+
+func _draw_summary() -> void:
+	var font := ThemeDB.fallback_font
+	var mouse := get_global_mouse_position()
+	var p := SUMMARY_PANEL
+	overlay.draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color(0, 0, 0, 0.55))
+	overlay.draw_rect(p, Color("221d18"))
+	overlay.draw_rect(p, Color("ffd54a"), false, 2.0)
+	var title := "Niveau réussi !"
+	overlay.draw_string(font, p.position + Vector2(0, 44), title, HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 28, Color("ffe066"))
+	overlay.draw_string(font, p.position + Vector2(0, 72), "%s · %s" % [biome["name"], layout.get("name", "")], HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 14, Color(1, 1, 1, 0.55))
+
+	# Chiffres clés sur une ligne
+	var stats := [
+		["Ennemis vaincus", str(summary["kills"])],
+		["Fuites", "%d (-%d vies)" % [summary["leaks"], summary["lives_lost"]] if summary["leaks"] > 0 else "aucune"],
+		["Or gagné", str(summary["gold_earned"])],
+		["Trésor gardé", "+%d" % summary["treasure"]],
+		["Score", "+%d" % summary["score"]],
+	]
+	var w := (p.size.x - 40) / stats.size()
+	for i in stats.size():
+		var x := p.position.x + 20 + i * w
+		overlay.draw_string(font, Vector2(x, p.position.y + 112), stats[i][0], HORIZONTAL_ALIGNMENT_CENTER, w, 12, Color(1, 1, 1, 0.55))
+		var col := Color.WHITE
+		if i == 1:
+			col = Color("6fd36a") if summary["leaks"] == 0 else Color("ff8a6b")
+		overlay.draw_string(font, Vector2(x, p.position.y + 136), stats[i][1], HORIZONTAL_ALIGNMENT_CENTER, w, 18, col)
+
+	# Dégâts par tour
+	overlay.draw_string(font, p.position + Vector2(24, 178), "Dégâts par tour", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("ffd59a"))
+	var rows: Array = summary["rows"]
+	var shown := mini(rows.size(), 9)
+	var best: float = rows[0][1] if not rows.is_empty() else 0.0
+	for i in shown:
+		var r: Array = rows[i]
+		var y := p.position.y + 194 + i * 30
+		var name_txt: String = r[0]
+		if i == 0 and r[1] > 0.0:
+			name_txt = "★ " + name_txt
+		overlay.draw_rect(Rect2(p.position.x + 24, y + 6, 10, 10), r[3])
+		overlay.draw_string(font, Vector2(p.position.x + 42, y + 16), name_txt, HORIZONTAL_ALIGNMENT_LEFT, 220, 13, Color("ffe066") if i == 0 else Color.WHITE)
+		var bar_x := p.position.x + 270
+		var bar_w := 225.0
+		overlay.draw_rect(Rect2(bar_x, y + 4, bar_w, 14), Color(1, 1, 1, 0.06))
+		if best > 0.0:
+			overlay.draw_rect(Rect2(bar_x, y + 4, bar_w * r[1] / best, 14), Color(r[3], 0.85))
+		var pct: float = 100.0 * r[1] / summary["total"] if summary["total"] > 0.0 else 0.0
+		var right := "%d  ·  %d %%  ·  %d élim." % [roundi(r[1]), roundi(pct), r[2]]
+		if r[1] <= 0.0 and r[2] == 0:
+			right = "soutien (cadence)" if r[0].begins_with("Totem") else "n'a pas tiré"
+		overlay.draw_string(font, Vector2(bar_x + bar_w + 8, y + 16), right, HORIZONTAL_ALIGNMENT_LEFT, p.end.x - bar_x - bar_w - 16, 12, Color(1, 1, 1, 0.75))
+	if rows.is_empty():
+		overlay.draw_string(font, p.position + Vector2(0, 220), "Aucune tour n'a tiré.", HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 14, Color(1, 1, 1, 0.5))
+	elif rows.size() > shown:
+		overlay.draw_string(font, Vector2(p.position.x + 42, p.position.y + 194 + shown * 30 + 14), "+ %d autres tours" % (rows.size() - shown), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.5))
+
+	# Mission et synergies
+	var notes := []
+	if summary["mission"] != "":
+		notes.append("Mission %s : %s" % ["réussie" if summary["mission_ok"] else "ratée", Missions.get_mission(summary["mission"])["desc"]])
+	if not summary["synergies"].is_empty():
+		notes.append("Synergies : " + ", ".join(summary["synergies"]))
+	for i in notes.size():
+		overlay.draw_string(font, Vector2(p.position.x, p.position.y + 462 + i * 22), notes[i], HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 13,
+			Color("ffcf9f") if i > 0 or summary["mission"] == "" else (Color("6fd36a") if summary["mission_ok"] else Color("ff8a6b")))
+	overlay.draw_string(font, Vector2(p.position.x, SUMMARY_CONTINUE.position.y - 16), "Espace ou clic pour continuer", HORIZONTAL_ALIGNMENT_CENTER, p.size.x, 11, Color(1, 1, 1, 0.4))
+	UI.button(overlay, SUMMARY_CONTINUE, "Continuer", SUMMARY_CONTINUE.has_point(mouse))

@@ -108,8 +108,9 @@ Les règles et leurs chiffres sont dans `scripts/data/difficulty.gd`.
    - ☠ boss : 3 vagues, le boss arrive à la dernière.
 2. **Le niveau** : on repart d'une grille vide avec de l'or neuf. Les vies, elles, se gardent d'un niveau à l'autre.
 3. **La récompense** : 1 carte parmi 3 (joker ou relique), ou passer pour gagner 3 vies. On garde 5 jokers et 8 reliques au maximum : au-delà, il faut en abandonner un.
-4. **Le trésor** : à la fin de chaque niveau, la moitié de l'or restant devient du trésor, qui se garde pour toute l'expédition. On le dépense chez le marchand et dans certains événements. Une relique ou un joker gagné sans place libre est revendu automatiquement en trésor.
-5. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
+4. **Le bilan** : à la fin de chaque niveau réussi, un bilan montre les ennemis vaincus, les fuites, l'or gagné, le trésor gardé, le score, et les dégâts de chaque tour (la meilleure est marquée d'une étoile). Espace ou clic pour continuer.
+5. **Le trésor** : à la fin de chaque niveau, la moitié de l'or restant devient du trésor, qui se garde pour toute l'expédition. On le dépense chez le marchand et dans certains événements. Une relique ou un joker gagné sans place libre est revendu automatiquement en trésor.
+6. Après le boss du désert, on passe à la glace. Après le boss de la glace, l'expédition est réussie.
 
 ### Les biomes
 

@@ -13,6 +13,8 @@ var line_dir := Vector2i.RIGHT # direction de tir avec la Lance du Pharaon
 var tier := 1                  # niveau de la tour : 1, 2 ou 3
 var spec := ""                 # spécialisation choisie au niveau 3 : "a" ou "b"
 var spent := 0                 # or dépensé (pose + améliorations), la moitié est rendue à la revente
+var dealt := 0.0              # dégâts infligés dans ce niveau (bilan)
+var kills := 0                 # ennemis achevés dans ce niveau (bilan)
 var jammed := 0.0              # secondes restantes de sabotage (pilleur) ou de gel (Colosse gelé)
 
 # Effets visuels du dernier tir
@@ -41,6 +43,16 @@ func spec_val(key: String, default: Variant = null) -> Variant:
 	if spec == "":
 		return default
 	return data["specs"][spec].get(key, default)
+
+
+## Nom affiché dans le bilan : type, niveau et spécialisation.
+func display_name() -> String:
+	var txt: String = data["name"]
+	if tier > 1:
+		txt += " niv. %d" % tier
+	if spec != "":
+		txt += " (%s)" % spec_data(spec)["name"]
+	return txt
 
 
 func spec_data(which: String) -> Dictionary:
@@ -260,7 +272,7 @@ func _attack() -> bool:
 				for e in level.enemies.duplicate():
 					if e != target and is_instance_valid(e) and not e.dead \
 							and Geometry2D.get_closest_point_to_segment(e.global_position, global_position, end).distance_to(e.global_position) <= 18.0:
-						e.take_damage(_damage())
+						e.take_damage(_damage(), self)
 			var harpoon: Variant = spec_val("harpoon")
 			if harpoon != null:
 				target.apply_slow(harpoon[0], harpoon[1])
@@ -270,8 +282,8 @@ func _attack() -> bool:
 				if second:
 					has_echo = true
 					echo_target = second.global_position - global_position
-					second.take_damage(_damage() * (1.0 if Run.has_duo("arsenal") else ECHO_DAMAGE))
-			target.take_damage(_damage())
+					second.take_damage(_damage() * (1.0 if Run.has_duo("arsenal") else ECHO_DAMAGE), self)
+			target.take_damage(_damage(), self)
 		"splash":
 			var target := _find_target(data.get("min_range", 0.0))
 			if target == null:
@@ -282,15 +294,15 @@ func _attack() -> bool:
 			for e in level.enemies.duplicate():
 				if is_instance_valid(e) and not e.dead and not e.flies() and e.global_position.distance_to(center) <= _splash_radius():
 					if fire != null:
-						e.apply_poison(fire[0] * _damage_mult() * tier_power(), fire[1])
-					e.take_damage(_damage())
+						e.apply_poison(fire[0] * _damage_mult() * tier_power(), fire[1], self)
+					e.take_damage(_damage(), self)
 		"aura":
 			var hit := false
 			var s := _slow()
 			for e in level.enemies.duplicate():
 				if _in_range(e):
 					e.apply_slow(s[0], s[1])
-					e.take_damage(_damage())
+					e.take_damage(_damage(), self)
 					hit = true
 			if not hit:
 				return false
@@ -311,7 +323,7 @@ func _attack() -> bool:
 
 ## Empoisonne un ennemi (et le rend vulnérable avec la spécialisation Acide).
 func _poison(e: Enemy) -> void:
-	e.apply_poison(_poison_dps(), data["poison_time"])
+	e.apply_poison(_poison_dps(), data["poison_time"], self)
 	if Run.has_duo("cryotoxine"):
 		e.apply_slow(Jokers.CRYOTOXINE_SLOW, data["poison_time"])
 	var acid: float = spec_val("acid", 0.0)
@@ -333,11 +345,11 @@ func _attack_line() -> bool:
 			"aura":
 				var s := _slow()
 				e.apply_slow(s[0], s[1])
-				e.take_damage(_damage())
+				e.take_damage(_damage(), self)
 			"poison":
 				_poison(e)
 			_:
-				e.take_damage(_damage())
+				e.take_damage(_damage(), self)
 	return true
 
 
