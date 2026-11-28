@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Totem sculpté sur sa pierre, vu de trois quarts. Centre de la case : (32, 32). -->
+  <defs>
+    <linearGradient id="bois" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b07a44"/><stop offset="0.6" stop-color="#8a5a32"/><stop offset="1" stop-color="#4e321c"/>
+    </linearGradient>
+    <linearGradient id="or" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f3d27a"/><stop offset="0.6" stop-color="#c9962a"/><stop offset="1" stop-color="#7a5510"/>
+    </linearGradient>
+    <linearGradient id="aile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a0"/><stop offset="1" stop-color="#c98f1f"/>
+    </linearGradient>
+    <radialGradient id="pierre" cx="0.4" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#cfc3af"/><stop offset="1" stop-color="#8c7f6c"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="35" cy="54" rx="17" ry="6" fill="#000" fill-opacity="0.28"/>
+  <g stroke="#2a1708" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">
+    <!-- pierre de base -->
+    <path d="M16 48 L16 52 A16 6 0 0 0 48 52 L48 48 Z" fill="#62584b"/>
+    <ellipse cx="32" cy="48" rx="16" ry="6" fill="url(#pierre)"/>
+    <!-- mât : trois visages empilés -->
+    <rect x="24" y="34" width="16" height="14" rx="1.5" fill="url(#bois)"/>
+    <rect x="24" y="21" width="16" height="13" rx="1.5" fill="url(#or)"/>
+    <rect x="24" y="9" width="16" height="12" rx="1.5" fill="url(#bois)"/>
+    <!-- visages -->
+    <g fill="#1e140c" stroke="none">
+      <rect x="27" y="38" width="4" height="2.5" rx="0.6"/><rect x="33" y="38" width="4" height="2.5" rx="0.6"/>
+      <rect x="27" y="24.5" width="4" height="3" rx="0.6"/><rect x="33" y="24.5" width="4" height="3" rx="0.6"/>
+      <rect x="27" y="12.5" width="4" height="2.5" rx="0.6"/><rect x="33" y="12.5" width="4" height="2.5" rx="0.6"/>
+    </g>
+    <path d="M28 44 Q32 46 36 44" fill="none"/>
+    <path d="M27 30.5 H37 M29 30.5 V32 M31 30.5 V32 M33 30.5 V32 M35 30.5 V32" fill="none" stroke-width="0.9"/>
+    <path d="M30 17.5 L32 19 L34 17.5" fill="#c8402e"/>
+    <!-- nez -->
+    <path d="M32 26 L31 29 L33 29 Z" fill="#7a5510" stroke-width="0.8"/>
+    <!-- ailes déployées -->
+    <path d="M24 13 L8 5 L10 10 L5 12 L11 15 L8 19 L24 18 Z" fill="url(#aile)"/>
+    <path d="M40 13 L56 5 L54 10 L59 12 L53 15 L56 19 L40 18 Z" fill="url(#aile)"/>
+    <path d="M23 15 L12 10 M23 16.5 L11 15 M41 15 L52 10 M41 16.5 L53 15" fill="none" stroke="#a8721a" stroke-width="0.8"/>
+    <!-- joyau au sommet -->
+    <path d="M28 9 L32 3 L36 9 Z" fill="url(#or)"/>
+    <circle cx="32" cy="7" r="1.6" fill="#7fd6e8"/>
+    <!-- reflet -->
+    <path d="M25.5 11 V46" stroke="#fff" stroke-opacity="0.25" stroke-width="1"/>
+  </g>
+</svg>
