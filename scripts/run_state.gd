@@ -31,6 +31,10 @@ var finished := false
 var codex_return := "res://scenes/hub.tscn"   # écran où revenir en quittant le carnet
 var forge_free := false             # fusion offerte par le feu de camp
 var deck: Array = []                # cartes de l'expédition : {"id", "lvl"} (voir data/cards.gd)
+var tutorial := false               # le tutoriel est en cours (voir data/tutorial.gd)
+var _saved := {}                    # l'expédition mise de côté pendant le tutoriel
+const _SAVED_KEYS := ["lives", "score", "kills", "deck", "jokers", "relics", "mission", "mission_ok",
+	"difficulty", "biome_index", "boss_killed"]
 
 
 func new_run() -> void:
@@ -62,6 +66,37 @@ func _start_biome() -> void:
 	map = MapGen.generate(rng, biome_index)
 	current = Vector2i(-1, -1)
 	visited.clear()
+
+
+## Lance le tutoriel. L'expédition en cours est mise de côté et revient à la fin.
+func start_tutorial() -> void:
+	_saved = {}
+	for k in _SAVED_KEYS:
+		var v = get(k)
+		_saved[k] = v.duplicate(true) if (v is Array or v is Dictionary) else v
+	tutorial = true
+	lives = 99
+	score = 0
+	jokers.clear()
+	relics.clear()
+	mission = ""
+	difficulty = 0
+	biome_index = 0
+	deck = Tutorial.deck()
+	get_tree().change_scene_to_file("res://scenes/level.tscn")
+
+
+## Fin du tutoriel : l'expédition mise de côté revient, puis on va à l'écran demandé.
+func end_tutorial(scene: String) -> void:
+	for k in _saved:
+		if get(k) is Array:
+			get(k).assign(_saved[k])
+		else:
+			set(k, _saved[k])
+	_saved = {}
+	tutorial = false
+	Profile.mark_tutorial_done()
+	get_tree().change_scene_to_file(scene)
 
 
 func biome() -> Dictionary:

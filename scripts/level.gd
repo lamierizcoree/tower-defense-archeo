@@ -63,6 +63,12 @@ var selected_card := -1   # index dans hand de la carte à poser (tour ou piège
 var traps := {}           # Vector2i -> {"id", "lvl", "waves", "hit": {id d'ennemi: true}}
 var effects: Array = []   # malus et bonus en cours : {"id", "lvl", "waves"}
 var card_fx := {"speed": 1.0, "vulnerable": 0.0}   # malus des ennemis, partagé avec eux
+var cards_played := {}    # type de carte -> nombre de cartes jouées dans ce niveau
+
+# Tutoriel (voir data/tutorial.gd)
+var tut_step := 0
+var tut_start := {}       # ce qui est noté au début de l'étape
+const TUT_W := 400.0
 var selected_relic := -1   # index dans Run.relics de la relique à poser (-1 = aucune)
 var ended := false
 var message := ""
@@ -81,14 +87,21 @@ var sold_towers: Array = []      # tours revendues : [nom, dégâts, éliminatio
 
 
 func _ready() -> void:
-	node = Run.current_node()
-	biome = Run.biome()
+	if Run.tutorial:
+		node = {"type": "combat", "layout": Tutorial.LAYOUT}
+		biome = Biomes.get_biome(0)
+	else:
+		node = Run.current_node()
+		biome = Run.biome()
 	score_start = Run.score
 	layout = Levels.get_layout(node["layout"])
 	_load_layout()
-	waves = Levels.make_waves(Run.rng, Run.biome_index, Run.current.x, node["type"])
-	_apply_difficulty_to_waves()
-	gold = 70 + 5 * (Run.biome_index * 5 + Run.current.x)
+	if Run.tutorial:
+		waves = Tutorial.waves()
+	else:
+		waves = Levels.make_waves(Run.rng, Run.biome_index, Run.current.x, node["type"])
+		_apply_difficulty_to_waves()
+	gold = Tutorial.START_GOLD if Run.tutorial else 70 + 5 * (Run.biome_index * 5 + Run.current.x)
 	if Difficulty.active("bourse"):
 		gold = int(gold * Difficulty.START_GOLD)
 	if Run.has_joker("rempart"):
@@ -148,6 +161,8 @@ func _process(delta: float) -> void:
 		elif enemies.is_empty():
 			_end_wave()
 		_check_traps()
+	if Run.tutorial:
+		_tutorial_update()
 	queue_redraw()
 	overlay.queue_redraw()
 
@@ -176,6 +191,10 @@ func _end_wave() -> void:
 	wave_running = false
 	storm = false
 	_update_seals()
+	if wave_index >= waves.size() - 1 and Run.tutorial:
+		ended = true
+		_say("Tutoriel terminé !", 99.0)
+		return
 	if wave_index >= waves.size() - 1:
 		ended = true
 		var kept := int(gold * (Jokers.MARCHANDS_TREASURE if Run.has_family("marchands", 3) else 0.5))
@@ -199,7 +218,7 @@ func _end_wave() -> void:
 
 
 func _is_storm(index: int) -> bool:
-	return biome["id"] == "desert" and index % 2 == 1
+	return biome["id"] == "desert" and index % 2 == 1 and not Run.tutorial
 
 
 ## Difficulté : transforme certains ennemis en élites et ajoute l'escorte du boss.
@@ -340,7 +359,7 @@ func _remove_enemy(e: Enemy) -> void:
 ## Entre deux vagues, les dunes bougent : les anciennes disparaissent et de nouvelles
 ## recouvrent des cases libres, sans jamais fermer complètement le passage.
 func _shift_dunes() -> void:
-	if biome["id"] != "desert":
+	if biome["id"] != "desert" or Run.tutorial:
 		return
 	for cell in dunes:
 		astar.set_point_solid(cell, false)
@@ -402,6 +421,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_click_card(k)
 		return
 
+	if Run.tutorial and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _tutorial_click(get_global_mouse_position()):
+			return
 	if ended:
 		return
 	if event is InputEventMouseButton and event.pressed:
@@ -704,6 +726,11 @@ func _remove_at(cell: Vector2i) -> void:
 ## Début du niveau : tout le deck est mélangé dans la pioche, puis on pioche la main de départ,
 ## qui contient toujours au moins une carte de tour et une carte de murs.
 func _setup_deck() -> void:
+	if Run.tutorial:
+		# main et pioche fixées pour que les explications collent (voir data/tutorial.gd)
+		hand = range(Tutorial.HAND.size())
+		draw_pile = range(Tutorial.HAND.size(), Run.deck.size())
+		return
 	draw_pile = range(Run.deck.size())
 	_shuffle(draw_pile)
 	_draw_cards(Cards.DRAW_START)
@@ -836,6 +863,8 @@ func _click_card(slot: int) -> void:
 
 ## La carte jouée part dans la défausse.
 func _discard_card(slot: int) -> void:
+	var kind := Cards.kind_of(_card_id(slot))
+	cards_played[kind] = int(cards_played.get(kind, 0)) + 1
 	discard.append(hand[slot])
 	hand.remove_at(slot)
 	if selected_card == slot:
@@ -1267,6 +1296,8 @@ func _draw() -> void:
 func _draw_hud(font: Font) -> void:
 	var type_names := {"combat": "", "elite": "  ·  ÉLITE", "boss": "  ·  BOSS", "fouille": "  ·  FOUILLE"}
 	var title := "%s · %s%s" % [biome["name"], layout["name"], type_names[node["type"]]]
+	if Run.tutorial:
+		title = "Tutoriel · " + layout["name"]
 	if Run.mission != "":
 		var m := Missions.get_mission(Run.mission)
 		title = "%s · Mission : %s" % [layout["name"], m["desc"]]
@@ -1365,6 +1396,8 @@ func _draw_overlay() -> void:
 	if not summary.is_empty():
 		_draw_summary()
 		return
+	if Run.tutorial:
+		_draw_tutorial()
 	if ended:
 		return
 	var mouse := get_global_mouse_position()
@@ -1626,6 +1659,84 @@ func _num(x: float) -> String:
 	if absf(x - roundf(x)) < 0.05:
 		return str(roundi(x))
 	return "%.1f" % x
+
+
+# --- Tutoriel ----------------------------------------------------------------
+
+## Passe aux étapes suivantes dès que leur condition est remplie.
+func _tutorial_update() -> void:
+	while tut_step < Tutorial.STEPS.size() - 1 and Tutorial.done(tut_step, self, tut_start):
+		_tutorial_next()
+
+
+func _tutorial_next() -> void:
+	tut_step = mini(tut_step + 1, Tutorial.STEPS.size() - 1)
+	tut_start = {"walls_played": int(cards_played.get("walls", 0))}
+
+
+## Rectangles du panneau et de ses boutons : {"panel", "next", "skip", "deck", "camp"}.
+func _tutorial_rects() -> Dictionary:
+	var font := ThemeDB.fallback_font
+	var step: Dictionary = Tutorial.STEPS[tut_step]
+	var final: bool = step["until"] == "end"
+	var w := 560.0 if final else TUT_W
+	var text_h := font.get_multiline_string_size(step["text"], HORIZONTAL_ALIGNMENT_LEFT, w - 24, 13).y
+	var h := 44.0 + text_h + 48.0
+	var pos := Vector2((Grid.SCREEN.x - w) / 2.0, 150) if final else Vector2(Grid.SCREEN.x - w - 8, 66)
+	var p := Rect2(pos, Vector2(w, h))
+	var r := {"panel": p}
+	var by := p.end.y - 38
+	if final:
+		r["deck"] = Rect2(p.position.x + 12, by, 260, 30)
+		r["camp"] = Rect2(p.end.x - 212, by, 200, 30)
+	else:
+		r["skip"] = Rect2(p.position.x + 12, by, 150, 26)
+		if step["until"] == "next":
+			r["next"] = Rect2(p.end.x - 132, by, 120, 30)
+	return r
+
+
+## Clic dans le panneau du tutoriel. Renvoie vrai si le clic a été utilisé.
+func _tutorial_click(pos: Vector2) -> bool:
+	var r := _tutorial_rects()
+	if r.has("next") and r["next"].has_point(pos):
+		_tutorial_next()
+		return true
+	if r.has("skip") and r["skip"].has_point(pos):
+		Run.end_tutorial("res://scenes/hub.tscn")
+		return true
+	if r.has("deck") and r["deck"].has_point(pos):
+		Run.end_tutorial("res://scenes/deck.tscn")
+		return true
+	if r.has("camp") and r["camp"].has_point(pos):
+		Run.end_tutorial("res://scenes/hub.tscn")
+		return true
+	return r["panel"].has_point(pos)
+
+
+func _draw_tutorial() -> void:
+	var font := ThemeDB.fallback_font
+	var mouse := get_global_mouse_position()
+	var step: Dictionary = Tutorial.STEPS[tut_step]
+	var r := _tutorial_rects()
+	var p: Rect2 = r["panel"]
+	if step["until"] == "end":
+		overlay.draw_rect(Rect2(Vector2.ZERO, Grid.SCREEN), Color(0, 0, 0, 0.5))
+	overlay.draw_rect(Rect2(p.position + Vector2(4, 5), p.size), Color(0, 0, 0, 0.35))
+	overlay.draw_rect(p, Color("1f1a15"))
+	overlay.draw_rect(p, Color("ffd54a"), false, 2.0)
+	overlay.draw_string(font, p.position + Vector2(12, 26), step["title"], HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 80, 17, Color("ffe066"))
+	overlay.draw_string(font, p.position + Vector2(p.size.x - 62, 24), "%d / %d" % [tut_step + 1, Tutorial.STEPS.size()], HORIZONTAL_ALIGNMENT_RIGHT, 50, 12, Color(1, 1, 1, 0.45))
+	overlay.draw_multiline_string(font, p.position + Vector2(12, 52), step["text"], HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 24, 13, -1, Color(1, 1, 1, 0.9))
+	if r.has("next"):
+		UI.button(overlay, r["next"], "Suivant", r["next"].has_point(mouse), true, 14)
+	elif r.has("skip"):
+		overlay.draw_string(font, Vector2(p.end.x - 200, p.end.y - 18), "à toi de jouer…", HORIZONTAL_ALIGNMENT_RIGHT, 188, 12, Color("ffd54a"))
+	if r.has("skip"):
+		UI.button(overlay, r["skip"], "Passer le tutoriel", r["skip"].has_point(mouse), true, 11)
+	if r.has("deck"):
+		UI.button(overlay, r["deck"], "Construire mon deck", r["deck"].has_point(mouse), true, 14)
+		UI.button(overlay, r["camp"], "Retour au camp", r["camp"].has_point(mouse), true, 14)
 
 
 # --- Bilan de fin de niveau --------------------------------------------------

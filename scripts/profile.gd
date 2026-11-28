@@ -17,6 +17,7 @@ var bosses := {}              # identifiant du boss -> nombre de victoires
 var alloc := {}               # catégorie d'amélioration -> points
 var difficulty_unlocked := 0  # plus haut niveau de difficulté débloqué (voir data/difficulty.gd)
 var difficulty := 0           # niveau choisi pour la prochaine expédition
+var tutorial_done := false   # le tutoriel a été vu (le bouton du camp n'est plus mis en avant)
 var deck := {}                # deck construit au camp : identifiant de carte -> exemplaires (voir data/cards.gd)
 
 
@@ -43,6 +44,7 @@ func load_profile() -> void:
 	bosses = data.get("bosses", {})
 	difficulty_unlocked = clampi(int(data.get("difficulty_unlocked", 0)), 0, Difficulty.MAX)
 	difficulty = clampi(int(data.get("difficulty", 0)), 0, difficulty_unlocked)
+	tutorial_done = bool(data.get("tutorial_done", false))
 	deck = {}
 	var saved_deck: Dictionary = data.get("deck", {})
 	for k in saved_deck:
@@ -63,7 +65,7 @@ func save_profile() -> void:
 		"rank": rank, "total_score": total_score, "best_score": best_score,
 		"runs": runs, "victories": victories, "bosses": bosses, "alloc": alloc,
 		"difficulty_unlocked": difficulty_unlocked, "difficulty": difficulty,
-		"deck": deck,
+		"deck": deck, "tutorial_done": tutorial_done,
 	}, "  "))
 
 
@@ -101,6 +103,12 @@ func level_cleared(boss_id := "") -> Array[String]:
 		if need > before and need <= rank:
 			unlocked.append(id)
 	return unlocked
+
+
+func mark_tutorial_done() -> void:
+	if not tutorial_done:
+		tutorial_done = true
+		save_profile()
 
 
 func is_card_unlocked(id: String) -> bool:

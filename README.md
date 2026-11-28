@@ -33,6 +33,7 @@ Pour voir les détails, passe la souris :
 
 Le jeu démarre au camp de base :
 - **Nouvelle expédition** (ou **Continuer** si une expédition est en cours).
+- **Tutoriel** (en bas à gauche, mis en avant tant qu'on ne l'a pas fait) : un petit niveau guidé en 11 étapes. On y apprend à poser des murs, à lire le chemin des ennemis, à jouer des cartes (murs, tours, piège), à lancer une vague et à améliorer une tour, puis comment construire son deck. Une expédition en cours est mise de côté pendant le tutoriel et reprend ensuite. Textes et étapes : `scripts/data/tutorial.gd`.
 - **Deck de cartes** : on choisit les 20 cartes de son deck (voir plus bas).
 - **Carnet des reliques et pouvoirs** : la liste de toutes les reliques et de tous les jokers. Les reliques pas encore débloquées sont masquées, avec le rang qui les débloque. Le carnet s'ouvre aussi depuis la carte (bouton en haut à droite).
 - **Améliorations** : on répartit ses points d'amélioration.
