@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1795865541|4362812';
+const CACHE_VERSION = '1795867165|4024188';
 /** @type {string} */
 const CACHE_PREFIX = 'Prototype Tower -sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
