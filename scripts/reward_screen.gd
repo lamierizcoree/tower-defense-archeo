@@ -181,6 +181,11 @@ func _draw() -> void:
 		draw_string(font, r.position + Vector2(0, 50), card_name, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, title_size, Color.WHITE)
 		draw_string(font, r.position + Vector2(0, 78), kind_label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, border)
 		draw_multiline_string(font, r.position + Vector2(18, 122), desc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 36, 15, -1, Color(1, 1, 1, 0.85))
+		var towers: Array = Jokers.towers_of(card["id"]) if card["kind"] == "joker" else Relics.towers_of(card["id"])
+		if not towers.is_empty():
+			# images des tours que cette carte améliore
+			var ty := r.size.y - (76.0 if card["kind"] == "joker" else 60.0)
+			TowerArt.draw_icon_row(self, towers, r.position + Vector2(r.size.x / 2, ty), 32.0, 8.0)
 		if card["kind"] == "joker":
 			var fam: Dictionary = Jokers.FAMILIES[Jokers.family_of(card["id"])]
 			var count := Jokers.family_count(Run.jokers, Jokers.family_of(card["id"]))

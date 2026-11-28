@@ -43,18 +43,18 @@ const DATA := {
 		"desc": "Une tour bloquée sur 3 côtés ou plus inflige double dégâts."},
 	"detour": {"name": "Long détour", "rarity": "non_commun", "family": "marchands",
 		"desc": "Au début de chaque vague, +1 or toutes les 3 cases du chemin."},
-	"givre_eternel": {"name": "Givre éternel", "rarity": "non_commun", "family": "alchimistes",
+	"givre_eternel": {"name": "Givre éternel", "rarity": "non_commun", "family": "alchimistes", "towers": ["givre"],
 		"desc": "Les ralentissements durent deux fois plus longtemps et sont plus forts."},
-	"venin": {"name": "Venin glacé", "rarity": "non_commun", "family": "alchimistes",
+	"venin": {"name": "Venin glacé", "rarity": "non_commun", "family": "alchimistes", "towers": ["alambic", "givre"],
 		"desc": "Le poison fait double dégâts aux ennemis ralentis."},
-	"artilleur": {"name": "Artilleur", "rarity": "non_commun", "family": "alchimistes",
+	"artilleur": {"name": "Artilleur", "rarity": "non_commun", "family": "alchimistes", "towers": ["mortier"],
 		"desc": "Les explosions du Mortier sont 50 % plus larges."},
-	"ancetres": {"name": "Totems ancestraux", "rarity": "non_commun", "family": "strateges",
+	"ancetres": {"name": "Totems ancestraux", "rarity": "non_commun", "family": "strateges", "towers": ["totem"],
 		"desc": "Les bonus de plusieurs Totems se cumulent."},
 	# --- Rares ---
-	"echo": {"name": "Écho", "rarity": "rare", "family": "strateges",
+	"echo": {"name": "Écho", "rarity": "rare", "family": "strateges", "towers": ["arbalete", "baliste"],
 		"desc": "Les tirs d'Arbalète et de Baliste rebondissent sur un 2e ennemi (60 %)."},
-	"fiole": {"name": "Fiole instable", "rarity": "rare", "family": "alchimistes",
+	"fiole": {"name": "Fiole instable", "rarity": "rare", "family": "alchimistes", "towers": ["alambic"],
 		"desc": "Un ennemi empoisonné qui meurt explose et blesse ses voisins."},
 	"sablier": {"name": "Sablier ancien", "rarity": "rare", "family": "alchimistes",
 		"desc": "Pendant la première vague de chaque niveau, les ennemis sont 30 % plus lents."},
@@ -99,15 +99,15 @@ const STRATEGES_LIVES := 2
 const DUOS := {
 	"forteresse": {"name": "Forteresse", "jokers": ["macon", "cul_de_sac"],
 		"desc": "Une tour bloquée sur 3 côtés ou plus a aussi +25 % de portée."},
-	"cryotoxine": {"name": "Cryotoxine", "jokers": ["venin", "givre_eternel"],
+	"cryotoxine": {"name": "Cryotoxine", "jokers": ["venin", "givre_eternel"], "towers": ["alambic", "givre"],
 		"desc": "Le poison ralentit aussi les ennemis de 15 %."},
-	"poudre": {"name": "Poudre noire", "jokers": ["fiole", "artilleur"],
+	"poudre": {"name": "Poudre noire", "jokers": ["fiole", "artilleur"], "towers": ["alambic", "mortier"],
 		"desc": "L'explosion de la Fiole est 50 % plus large et fait double dégâts."},
 	"chasseur": {"name": "Chasseur de primes", "jokers": ["prime", "butin"],
 		"desc": "Les élites et les boss rapportent +10 or."},
 	"cartographe": {"name": "Cartographe", "jokers": ["detour", "sablier"],
 		"desc": "Long détour donne +1 or toutes les 2 cases au lieu de 3."},
-	"arsenal": {"name": "Arsenal", "jokers": ["echo", "meute"],
+	"arsenal": {"name": "Arsenal", "jokers": ["echo", "meute"], "towers": ["arbalete", "baliste"],
 		"desc": "Les rebonds d'Écho font 100 % des dégâts au lieu de 60 %."},
 }
 const FORTERESSE_RANGE := 1.25
@@ -197,6 +197,11 @@ static func would_unlock(held: Array, id: String) -> String:
 static func describe_family(family: String) -> String:
 	var f: Dictionary = FAMILIES[family]
 	return "%s — 2 : %s  3 : %s" % [f["name"], f["bonus"][2], f["bonus"][3]]
+
+
+## Tours concernées par un joker (pour afficher leur image), ou [].
+static func towers_of(id: String) -> Array:
+	return DATA[id].get("towers", [])
 
 
 static func get_joker(id: String) -> Dictionary:

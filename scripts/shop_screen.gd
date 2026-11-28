@@ -120,6 +120,13 @@ func _draw() -> void:
 		draw_multiline_string(font, r.position + Vector2(8, 32), title_txt, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 16, 16, 2, Color(1, 1, 1, alpha))
 		draw_multiline_string(font, r.position + Vector2(0, 86), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11, 2, Color(color, alpha))
 		draw_multiline_string(font, r.position + Vector2(8, 132), desc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x - 16, 12, 7, Color(1, 1, 1, 0.8 * alpha))
+		var item_towers: Array = []
+		if item["kind"] == "joker":
+			item_towers = Jokers.towers_of(item["id"])
+		elif item["kind"] == "relic":
+			item_towers = Relics.towers_of(item["id"])
+		if not item_towers.is_empty() and not item["sold"]:
+			TowerArt.draw_icon_row(self, item_towers, r.position + Vector2(r.size.x / 2, r.size.y - 52), 28.0)
 		var price := "VENDU" if item["sold"] else "%d trésor" % item["price"]
 		draw_string(font, r.position + Vector2(0, r.size.y - 16), price, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 17,
 			Color(1, 1, 1, 0.4) if item["sold"] else (Color("ffe066") if Run.treasure >= item["price"] else Color(1, 0.5, 0.4)))

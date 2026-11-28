@@ -1002,7 +1002,10 @@ func _draw_relic_bar(font: Font) -> void:
 		var active := i == selected_relic
 		draw_rect(r, Color(1, 1, 1, 0.15) if active else Color(1, 1, 1, 0.06))
 		draw_rect(r, Color("ffe066") if active else Color(color, 0.6), false, 2.0 if active else 1.0)
-		draw_circle(r.position + Vector2(10, 20), 5.0, color)
+		if owner:
+			TowerArt.draw_icon(self, owner.type_id, r.position + Vector2(10, 20), 18.0)  # tour qui porte la relique
+		else:
+			draw_circle(r.position + Vector2(10, 20), 5.0, color)
 		var text_color := Color(1, 1, 1, 0.45) if owner else Color.WHITE
 		draw_string(font, r.position + Vector2(19, 17), relic["name"], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 21, 11, text_color)
 		var status: String = "posée : %s" % owner.data["name"] if owner else Relics.RARITY_NAMES[relic["rarity"]]

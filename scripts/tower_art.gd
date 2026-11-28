@@ -97,6 +97,15 @@ static func _draw_sprites(c: CanvasItem, type_id: String, aim: float, kick: floa
 				c.draw_circle(pos + Vector2(cos(a) * 15.0, 4 + sin(a) * 6.0), 1.5, Color(1, 1, 1, 0.8))
 
 
+## Une rangée d'icônes de tours centrée sur center (cartes de jokers et de reliques).
+static func draw_icon_row(c: CanvasItem, ids: Array, center: Vector2, size: float, gap := 4.0) -> void:
+	var total := ids.size() * size + (ids.size() - 1) * gap
+	for i in ids.size():
+		var x := center.x - total / 2.0 + size / 2.0 + i * (size + gap)
+		c.draw_circle(Vector2(x, center.y), size * 0.52, Color(1, 1, 1, 0.08))
+		draw_icon(c, ids[i], Vector2(x, center.y), size)
+
+
 ## Icône d'une tour (barre de construction, menu d'amélioration) : size = hauteur voulue.
 static func draw_icon(c: CanvasItem, type_id: String, center: Vector2, size: float) -> void:
 	if not SPRITES.has(type_id):
