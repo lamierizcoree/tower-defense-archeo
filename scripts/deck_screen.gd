@@ -3,7 +3,7 @@ extends Node2D
 ## avec au moins une carte de tour et une carte de murs. Les cartes se débloquent
 ## avec le rang d'archéologue. Le deck est sauvegardé dans le profil.
 
-const ROW_H := 40.0
+const ROW_H := 37.0
 const TOP := 128.0
 const BACK := Rect2(560, 680, 200, 40)
 const DEFAULT_BTN := Rect2(200, 680, 200, 40)

@@ -11,6 +11,7 @@ extends RefCounted
 ##   slow (vitesse multipliée par ce nombre), slow_time (givre)
 ##   poison_dps, poison_time (alambic)
 ##   buff (bonus de cadence donné aux tours voisines, totem)
+##   anti_air (vise d'abord les ennemis volants), air_damage (dégâts multipliés contre eux)
 ##   specs : les deux spécialisations proposées au niveau 3 (voies "a" et "b").
 ##     Clés possibles : rate_x, damage_x, range_x, radius_x, poison_x, buff_x (multiplicateurs),
 ##     strongest (vise l'ennemi qui a le plus de PV), harpoon [ralentissement, durée],
@@ -24,7 +25,7 @@ const TIER2_RANGE := 1.1
 const TIER2_COST := 0.6
 const TIER3_COST := 1.0
 
-const ORDER := ["arbalete", "baliste", "mortier", "givre", "alambic", "totem"]
+const ORDER := ["arbalete", "baliste", "mortier", "givre", "alambic", "totem", "carabine"]
 
 const DATA := {
 	"arbalete": {
@@ -89,6 +90,17 @@ const DATA := {
 		"specs": {
 			"a": {"name": "Tambours de guerre", "desc": "Bonus de cadence x1,7", "buff_x": 1.7},
 			"b": {"name": "Totem de rage", "desc": "Tours à portée : +25 % de dégâts en plus", "rage": 0.25},
+		},
+	},
+	"carabine": {
+		"name": "Carabine", "key": KEY_8, "cost": 40, "range": 380.0,
+		"attack": "single", "damage": 110.0, "delay": 4.0, "anti_air": true, "air_damage": 1.5,
+		"color": Color("c0603c"),
+		"desc": "Tir de précision très lointain, très lent ; vise d'abord les volants",
+		"specs": {
+			"a": {"name": "Visée stable", "desc": "Cadence x1,6", "rate_x": 1.6},
+			"b": {"name": "Gros gibier", "desc": "Dégâts x1,6, vise le plus résistant (volants d'abord)",
+				"damage_x": 1.6, "strongest": true},
 		},
 	},
 }

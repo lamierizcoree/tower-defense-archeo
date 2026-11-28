@@ -133,7 +133,7 @@ Chaque biome a 5 niveaux et une salle de boss, dessinés à la main dans `script
 | Colosse | niveau 3 | Très résistant, coûte 2 vies |
 | Fouisseur | niveau 2 (désert) | Creuse sous les murs, prend le plus court chemin |
 | Jarre | niveau 2 | Libère 3 larves très rapides en se brisant |
-| Ibis | niveau 3 | Vole tout droit par-dessus les murs. Le Mortier ne peut pas le toucher |
+| Ibis | niveau 3 | Vole tout droit par-dessus les murs. Le Mortier ne peut pas le toucher ; la Carabine le vise en priorité |
 | Embaumeur | niveau 4 | Soigne les ennemis proches de 6 % de leurs PV par seconde, sauf les empoisonnés |
 | Pilleur | niveau 5 | Toutes les 5 s, bloque la tour la plus proche pendant 2,5 s |
 
@@ -225,7 +225,7 @@ On ne pose plus les tours avec un budget libre : on joue des **cartes**, pioché
 | Carte | Type | Prix | Effet | Amélioration 1 | Amélioration 2 | Rang |
 |---|---|---|---|---|---|---|
 | Pierres taillées | Construction | 3 | +3 murs | +4 murs | +5 murs | 0 |
-| Arbalète, Baliste, Mortier, Givre, Alambic, Totem | Tour | prix de la tour | Pose la tour sur un mur | 30 % moins chère | Arrive au niveau 2 | 0 |
+| Arbalète, Baliste, Mortier, Givre, Alambic, Totem, Carabine | Tour | prix de la tour | Pose la tour sur un mur | 30 % moins chère | Arrive au niveau 2 | 0 |
 | Fosse à pieux | Piège | 8 | 30 dégâts à chaque ennemi qui passe, 1 vague | 40 dégâts, 2 vagues | 50 dégâts, 3 vagues | 0 |
 | Huile de lampe | Bonus tours | 10 | Tours +25 % de cadence, 1 vague | 2 vagues | 3 vagues | 0 |
 | Résine collante | Piège | 6 | Ralentit de 50 % pendant 2 s, 1 vague | 2,5 s, 2 vagues | 3 s, 3 vagues | 2 |
@@ -235,7 +235,7 @@ On ne pose plus les tours avec un budget libre : on joue des **cartes**, pioché
 
 Un effet joué entre deux vagues compte à partir de la vague suivante ; joué pendant une vague, cette vague compte. Les ibis volent au-dessus des pièges. Chaque ennemi déclenche un piège une fois par vague.
 
-**Construire son deck** (camp de base, bouton « Deck de cartes ») : 20 cartes exactement, 6 exemplaires au plus par carte, au moins une carte de tour et une carte de murs. Les cartes se débloquent avec le rang d'archéologue (colonne « Rang »). Deck de départ : 6 Pierres taillées, 4 Arbalètes, 2 Givres, 2 Balistes, 1 Mortier, 1 Alambic, 1 Totem, 2 Fosses à pieux, 1 Huile de lampe.
+**Construire son deck** (camp de base, bouton « Deck de cartes ») : 20 cartes exactement, 6 exemplaires au plus par carte, au moins une carte de tour et une carte de murs. Les cartes se débloquent avec le rang d'archéologue (colonne « Rang »). Deck de départ : 6 Pierres taillées, 3 Arbalètes, 1 Carabine, 2 Givres, 2 Balistes, 1 Mortier, 1 Alambic, 1 Totem, 2 Fosses à pieux, 1 Huile de lampe.
 
 **Améliorer ses cartes** : après chaque victoire, l'atelier de cartes permet d'améliorer une carte du deck. Chaque carte s'améliore 2 fois au plus, et l'amélioration dure toute l'expédition. Graver une relique (la détruire) donne une amélioration de plus.
 
@@ -251,6 +251,7 @@ Tous les réglages (taille du deck, main de départ, cartes par vague, murs de b
 | Givre | 20 | Ralentit tous les ennemis à portée |
 | Alambic | 25 | Empoisonne, vise d'abord les ennemis sains |
 | Totem | 30 | N'attaque pas : les tours voisines tirent 30 % plus vite |
+| Carabine | 40 | Tireur d'élite : portée 380 (environ 8 cases), 110 dégâts, un tir toutes les 4 s. Vise d'abord les volants et leur fait 1,5 fois plus de dégâts |
 
 ### Améliorer les tours
 
@@ -267,12 +268,13 @@ Clique sur une tour posée (ou survole-la et appuie sur **U**) pour ouvrir son m
 | Givre | Blizzard : portée x1,4 | Gel profond : ralentit de 70 %, dégâts x3 |
 | Alambic | Nuage toxique : empoisonne aussi autour de la cible | Acide : poison x1,5, les empoisonnés subissent +20 % de dégâts |
 | Totem | Tambours de guerre : bonus de cadence x1,7 | Totem de rage : tours à portée +25 % de dégâts |
+| Carabine | Visée stable : cadence x1,6 | Gros gibier : dégâts x1,6, vise le plus résistant (volants d'abord) |
 
 Revendre une tour rend la moitié de tout ce qu'elle a coûté (pose et améliorations). Les chiffres sont dans `scripts/tower_types.gd`.
 
 ## Les sprites
 
-Une partie des graphismes est faite de sprites dessinés en vectoriel : les sources sont dans `art/sources/*.svg` et les images utilisées par le jeu dans `art/sprites/*.png` (rendues en taille double pour rester nettes). Les 6 tours (socle, et arme qui pivote pour l'Arbalète, la Baliste et le Mortier), le dessus des murs (désert et glace) et les 11 ennemis (`art/sources/ennemis/`) sont en sprites ; ils servent aussi d'icônes dans la barre de construction, le menu d'amélioration et sur les reliques. Survoler un joker (récompense, marchand, carnet, feu de camp) ouvre une infobulle avec son descriptif et les tours concernées. Le reste est dessiné par code dans `scripts/art.gd` et `scripts/tower_art.gd`.
+Une partie des graphismes est faite de sprites dessinés en vectoriel : les sources sont dans `art/sources/*.svg` et les images utilisées par le jeu dans `art/sprites/*.png` (rendues en taille double pour rester nettes). Les 7 tours (socle, et arme qui pivote pour l'Arbalète, la Baliste, le Mortier et la Carabine), le dessus des murs (désert et glace) et les 11 ennemis (`art/sources/ennemis/`) sont en sprites ; ils servent aussi d'icônes dans la barre de construction, le menu d'amélioration et sur les reliques. Survoler un joker (récompense, marchand, carnet, feu de camp) ouvre une infobulle avec son descriptif et les tours concernées. Le reste est dessiné par code dans `scripts/art.gd` et `scripts/tower_art.gd`.
 
 Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur vectoriel), puis l'exporter en PNG à 200 % dans `art/sprites/` avec le même nom, ou lancer `node tools/render_svg.js art/sources art/sprites` (et `node tools/render_svg.js art/sources/ennemis art/sprites/ennemis` pour les ennemis). Les ennemis gardent leurs effets dessinés par code par-dessus le sprite : contour d'élite, givre, poison, barre de vie.
 
@@ -289,7 +291,7 @@ Pour modifier un sprite : éditer le SVG (Inkscape, ou n'importe quel éditeur v
 - `scripts/grid.gd` : taille de la grille, conversions case ↔ pixels.
 - `scripts/enemy.gd` : un ennemi qui suit son chemin et le recalcule quand la grille change.
 - `scripts/tower.gd` : le comportement des tours (tir, zone, ralentissement, poison, soutien).
-- `scripts/tower_types.gd` : les chiffres des 6 tours (prix, portée, dégâts, cadence).
+- `scripts/tower_types.gd` : les chiffres des 7 tours (prix, portée, dégâts, cadence).
 
 Les valeurs à modifier pour tester l'équilibrage (coûts, portée, dégâts, vitesse) sont des constantes en haut de chaque script.
 

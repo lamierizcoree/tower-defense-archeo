@@ -290,7 +290,7 @@ func _attack() -> bool:
 					has_echo = true
 					echo_target = second.global_position - global_position
 					second.take_damage(_damage() * (1.0 if Run.has_duo("arsenal") else ECHO_DAMAGE), self)
-			target.take_damage(_damage(), self)
+			target.take_damage(_damage() * (float(data.get("air_damage", 1.0)) if target.flies() else 1.0), self)
 		"splash":
 			var target := _find_target(data.get("min_range", 0.0))
 			if target == null:
@@ -394,6 +394,10 @@ func _find_target(min_range := 0.0, prefer_healthy := false) -> Enemy:
 			continue
 		if best == null:
 			best = e
+			continue
+		if data.get("anti_air", false) and best.flies() != e.flies():
+			if e.flies():
+				best = e  # Carabine : les volants d'abord
 			continue
 		if prefer_healthy and best.is_poisoned() != e.is_poisoned():
 			if not e.is_poisoned():

@@ -1447,7 +1447,11 @@ func _tower_panel(id: String, t: Tower) -> Array:
 		lines.append(_line("Portée : %d%s" % [rng, "  (tempête -25 %)" if storm else ""]))
 	match d["attack"]:
 		"single":
-			lines.append(_line("Touche tout ce qui est sur la ligne" if line_mode else "Vise l'ennemi le plus proche de la sortie"))
+			if d.get("anti_air", false) and not line_mode:
+				lines.append(_line("Vise d'abord les volants (dégâts x%s contre eux)," % _num(d["air_damage"]).replace(".", ","), 13, Color("ffd59a")))
+				lines.append(_line("puis l'ennemi le plus proche de la sortie"))
+			else:
+				lines.append(_line("Touche tout ce qui est sur la ligne" if line_mode else "Vise l'ennemi le plus proche de la sortie"))
 			if Run.has_joker("echo") and not line_mode:
 				lines.append(_line("Écho : rebondit sur un 2e ennemi (60 %)", 13, Color("ffd54a")))
 		"splash":
