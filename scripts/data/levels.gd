@@ -189,7 +189,7 @@ const POOLS := [
 const BOSS_LAYOUTS := ["d_boss", "g_boss"]
 
 ## Nombre de vagues selon le type de niveau.
-const WAVE_COUNT := {"combat": 2, "elite": 3, "boss": 3}
+const WAVE_COUNT := {"combat": 2, "elite": 3, "boss": 3, "fouille": 2}
 
 
 static func get_layout(id: String) -> Dictionary:

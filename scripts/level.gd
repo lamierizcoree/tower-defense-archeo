@@ -49,6 +49,7 @@ var storm := false
 var gold := 0
 var gold_rest := 0.0   # morceaux d'or pas encore entiers (voir earn)
 var wall_paid := {}    # Vector2i -> or payé pour ce mur (rendu s'il est retiré)
+var leaks := 0          # ennemis qui se sont échappés dans ce niveau (mission « aucune fuite »)
 var upgrade_cell := Vector2i(-1, -1)  # tour dont le menu d'amélioration est ouvert
 var free_walls_used := 0  # murs gratuits déjà posés (joker Architecte fou)
 var selected := ""   # "" = mur, sinon l'identifiant de la tour choisie
@@ -151,7 +152,13 @@ func _end_wave() -> void:
 	_update_seals()
 	if wave_index >= waves.size() - 1:
 		ended = true
-		_say("Niveau réussi !", 99.0)
+		Run.treasure += gold / 2
+		if Run.mission != "":
+			Run.mission_ok = _mission_ok()
+		var msg := "Niveau réussi ! +%d trésor" % (gold / 2)
+		if Run.mission != "":
+			msg += "  ·  mission " + ("réussie !" if Run.mission_ok else "ratée")
+		_say(msg, 99.0)
 		get_tree().create_timer(1.5).timeout.connect(Run.level_won)
 		return
 	earn(WAVE_BONUS)
@@ -240,6 +247,7 @@ func _on_enemy_reached_goal(e: Enemy) -> void:
 	if ended:
 		return
 	Run.lives -= e.lives_cost()
+	leaks += 1
 	if Run.has_joker("pillard"):
 		earn(6)
 	if Run.lives <= 0:
@@ -423,6 +431,9 @@ func _try_place_wall(cell: Vector2i) -> void:
 	if rocks.has(cell) or dunes.has(cell) or cell in spawns or cell == goal:
 		_say("Impossible de construire ici")
 		return
+	if walls.size() >= _mission_limit("max_walls"):
+		_say("Mission : %d murs au maximum" % _mission_limit("max_walls"))
+		return
 	if Difficulty.active("carriere") and walls.size() >= Difficulty.WALL_LIMIT:
 		_say("Carrière épuisée : %d murs au maximum" % Difficulty.WALL_LIMIT)
 		return
@@ -457,6 +468,9 @@ func _try_place_tower(cell: Vector2i, id: String) -> void:
 		_say("Il y a déjà une tour ici")
 		return
 	var cost := tower_cost(id)
+	if towers.size() >= _mission_limit("max_towers"):
+		_say("Mission : %d tours au maximum" % _mission_limit("max_towers"))
+		return
 	if gold < cost:
 		_say("Pas assez d'or")
 		return
@@ -469,6 +483,21 @@ func _try_place_tower(cell: Vector2i, id: String) -> void:
 
 
 # --- Amélioration des tours --------------------------------------------------
+
+## Limite imposée par la mission de fouille (très grand nombre s'il n'y en a pas).
+func _mission_limit(key: String) -> int:
+	if Run.mission == "":
+		return 1 << 30
+	return int(Missions.get_mission(Run.mission).get(key, 1 << 30))
+
+
+## La mission est-elle réussie ? Les limites sont imposées pendant la partie,
+## il ne reste qu'à vérifier les fuites.
+func _mission_ok() -> bool:
+	if Run.mission == "aucune_fuite":
+		return leaks == 0
+	return true
+
 
 ## Prix de la prochaine amélioration d'une tour (-1 si elle est au maximum).
 func upgrade_cost(t: Tower) -> int:
@@ -816,8 +845,11 @@ func _draw() -> void:
 
 
 func _draw_hud(font: Font) -> void:
-	var type_names := {"combat": "", "elite": "  ·  ÉLITE", "boss": "  ·  BOSS"}
+	var type_names := {"combat": "", "elite": "  ·  ÉLITE", "boss": "  ·  BOSS", "fouille": "  ·  FOUILLE"}
 	var title := "%s · %s%s" % [biome["name"], layout["name"], type_names[node["type"]]]
+	if Run.mission != "":
+		var m := Missions.get_mission(Run.mission)
+		title = "%s · Mission : %s" % [layout["name"], m["desc"]]
 	if Run.difficulty > 0:
 		title += "  ·  D%d" % Run.difficulty
 	draw_string(font, Vector2(12, 24), title, HORIZONTAL_ALIGNMENT_LEFT, 470, 17, Color.WHITE)
